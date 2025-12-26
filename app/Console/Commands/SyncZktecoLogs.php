@@ -34,8 +34,11 @@ class SyncZktecoLogs extends Command
         $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
         $port = env('ZK_DEVICE_PORT', 4370);
 
-        $this->info("Connecting to ZKTeco Device ($ip)...");
+        $this->sync($ip,$port);
+    }
 
+    private function sync($ip, $port)
+    {
         try {
             $zk = new LaravelZkteco($ip, $port);
             
@@ -58,20 +61,15 @@ class SyncZktecoLogs extends Command
                     ]
                 );
             }
-            $this->info('Users synced: ' . count($users));
+            //$this->info('Users synced: ' . count($users));
 
             // 2. Sync Logs
-            $this->info('Fetching attendance logs...');
+            //$this->info('Fetching attendance logs...');
             // Connection is still open
             $attendance = $zk->getAttendance();
             
             Log::info("ZK Sync: Fetched " . count($attendance) . " records from device.");
-            if (count($attendance) > 0) {
-                Log::info("ZK Sync: First Record Sample: " . json_encode($attendance[0]));
-            } else {
-                Log::warning("ZK Sync: No records found on device.");
-            }
-
+            
             $newCount = 0;
             foreach ($attendance as $log) {
                 // Check if exists
@@ -120,9 +118,11 @@ class SyncZktecoLogs extends Command
                 }
             }
             
-            $this->info("Sync Complete! $newCount new records added.");
+            if ($newCount > 0) {
+                $this->info("Sync: $newCount new records.");
+            }
         } else {
-                $this->error('Connection Failed. Check IP or Network.');
+                //$this->error('Connection Failed.');
             }
         } catch (\Exception $e) {
             $this->error('Error: ' . $e->getMessage());

@@ -66,4 +66,19 @@
         </div>
     </div>
 </div>
+@section('scripts')
+<script>
+    setInterval(function() {
+        // Fetch Today's Logs/Count via API
+        fetch("{{ route('zk.api.logs') }}?filter=today")
+            .then(response => response.json())
+            .then(data => {
+                const countEl = document.getElementById('dashboardLogCount');
+                if (countEl) {
+                    countEl.innerText = data.count;
+                }
+            })
+            .catch(e => console.error("Dashboard Poll Error", e));
+    }, 5000);
+</script>
 @endsection

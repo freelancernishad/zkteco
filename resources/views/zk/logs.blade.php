@@ -56,7 +56,7 @@
                 @if(isset($attendance) && count($attendance) > 0)
                     @foreach($attendance as $log)
                     <tr>
-                        <td class="fw-bold ps-4">{{ date('h:i A', strtotime($log->timestamp)) }} <small class="text-muted ms-1">{{ date('M d, Y', strtotime($log->timestamp)) }}</small></td>
+                        <td class="fw-bold ps-4">{{ date('h:i:s A', strtotime($log->timestamp)) }} <small class="text-muted ms-1">{{ date('M d, Y', strtotime($log->timestamp)) }}</small></td>
                         <td>
                             <div class="d-flex flex-column">
                                 <span class="fw-bold text-dark">{{ $log->user ? $log->user->name : $log->user_id }}</span>
@@ -135,7 +135,7 @@
 
                         // Format Date
                         const dateObj = new Date(log.timestamp);
-                        const timeStr = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour24: true }); 
+                        const timeStr = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour24: true }); 
                         const dateStr = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
                         html += `

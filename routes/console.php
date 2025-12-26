@@ -2,4 +2,4 @@
 
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::command('zk:sync')->everyMinute();
+Schedule::command('zk:sync')->everyFiveSeconds()->withoutOverlapping();
