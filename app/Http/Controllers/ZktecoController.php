@@ -16,16 +16,30 @@ class ZktecoController extends Controller
     public function connect()
     {
         // IP Address of the ZKTeco device
-        $ip = '192.168.0.201';
-        $port = 4370;
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201');
+        $port = env('ZK_DEVICE_PORT', 4370);
 
         $zk = new LaravelZkteco($ip, $port);
         $status = $zk->connect();
         
-        // If connected, we might want to get specific info or just show status
-        // For now, simpler is better for "Connection Information"
+        $deviceInfo = null;
+        if ($status) {
+            $zk->disableDevice();
+            $deviceInfo = [
+                'version' => $zk->version(),
+                'device_name' => $zk->deviceName(),
+                'serial_number' => $zk->serialNumber(),
+                'platform' => $zk->platform(),
+                'os_version' => $zk->osVersion(),
+                'work_code' => $zk->workCode(),
+                'ssr' => $zk->ssr(),
+                'pin_width' => $zk->pinWidth(),
+                'device_time' => $zk->getTime()
+            ];
+            $zk->enableDevice();
+        }
         
-        return view('zk.connect', compact('ip', 'port', 'status'));
+        return view('zk.connect', compact('ip', 'port', 'status', 'deviceInfo'));
     }
 
     /**
@@ -33,8 +47,8 @@ class ZktecoController extends Controller
      */
     public function getUsers()
     {
-        $ip = '192.168.0.201'; // CHANGE THIS
-        $port = 4370;
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+        $port = env('ZK_DEVICE_PORT', 4370);
 
         $zk = new LaravelZkteco($ip, $port);
 
@@ -54,8 +68,8 @@ class ZktecoController extends Controller
      */
     public function getAttendance()
     {
-        $ip = '192.168.0.201'; // CHANGE THIS
-        $port = 4370;
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+        $port = env('ZK_DEVICE_PORT', 4370);
 
         $zk = new LaravelZkteco($ip, $port);
 
@@ -72,8 +86,8 @@ class ZktecoController extends Controller
 
     public function getDeviceInfo()
     {
-        $ip = '192.168.0.201'; 
-        $port = 4370;
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+        $port = env('ZK_DEVICE_PORT', 4370);
 
         $zk = new LaravelZkteco($ip, $port);
 
@@ -98,8 +112,8 @@ class ZktecoController extends Controller
     public function index()
     {
         // 1. Dashboard Overview
-        $ip = '192.168.0.201'; 
-        $port = 4370;
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+        $port = env('ZK_DEVICE_PORT', 4370);
         $zk = new LaravelZkteco($ip, $port);
         
         // Fetch Users Live for Count
@@ -119,8 +133,8 @@ class ZktecoController extends Controller
     public function users()
     {
         // 2. Users Management Page
-        $ip = '192.168.0.201'; 
-        $port = 4370;
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+        $port = env('ZK_DEVICE_PORT', 4370);
         $zk = new LaravelZkteco($ip, $port);
         $users = [];
         
@@ -136,8 +150,8 @@ class ZktecoController extends Controller
     public function logs(Request $request)
     {
         // 3. Logs Page with Filters
-        $ip = '192.168.0.201'; 
-        $port = 4370;
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+        $port = env('ZK_DEVICE_PORT', 4370);
         
         // Fetch users from DB (Persistent)
         $users = ZkUser::all();
@@ -162,13 +176,22 @@ class ZktecoController extends Controller
     public function forceSync()
     {
         Artisan::call('zk:sync');
-        return redirect()->back()->with('success', 'Manual Sync Completed Successfully!');
+        $output = Artisan::output();
+        
+        // Simple check for success keyword or lack of error
+        // The command outputs "Sync Complete!" on success.
+        
+        if (str_contains($output, 'Connection Failed') || str_contains($output, 'Error')) {
+             return redirect()->back()->with('error', $output);
+        }
+
+        return redirect()->back()->with('success', $output);
     }
 
     public function storeUser(Request $request)
     {
-        $ip = '192.168.0.201'; 
-        $port = 4370;
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+        $port = env('ZK_DEVICE_PORT', 4370);
         $zk = new LaravelZkteco($ip, $port);
 
         if ($zk->connect()) {
@@ -195,8 +218,8 @@ class ZktecoController extends Controller
 
     public function destroyUser($uid)
     {
-        $ip = '192.168.0.201'; 
-        $port = 4370;
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+        $port = env('ZK_DEVICE_PORT', 4370);
         $zk = new LaravelZkteco($ip, $port);
 
         if ($zk->connect()) {
@@ -234,8 +257,8 @@ class ZktecoController extends Controller
 
     public function clearLogs()
     {
-        $ip = '192.168.0.201'; 
-        $port = 4370;
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+        $port = env('ZK_DEVICE_PORT', 4370);
         $zk = new LaravelZkteco($ip, $port);
 
         if ($zk->connect()) {

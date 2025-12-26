@@ -50,7 +50,7 @@
         
         #sidebar-wrapper .list-group { width: var(--sidebar-width); padding: 1rem 0; }
         
-        .list-group-item { 
+        #sidebar-wrapper .list-group-item { 
             border: none; 
             padding: 14px 24px; 
             color: #a2a3b7; 
@@ -61,18 +61,18 @@
             border-left: 3px solid transparent;
         }
         
-        .list-group-item:hover { 
+        #sidebar-wrapper .list-group-item:hover { 
             background-color: rgba(255,255,255,0.03); 
             color: #fff; 
         }
         
-        .list-group-item.active { 
+        #sidebar-wrapper .list-group-item.active { 
             background-color: rgba(79, 70, 229, 0.1); 
             color: #7269ef; 
             border-left: 3px solid #7269ef;
         }
         
-        .list-group-item i { 
+        #sidebar-wrapper .list-group-item i { 
             width: 24px; 
             display: inline-block; 
             text-align: center; 
@@ -207,6 +207,9 @@
                 <a href="{{ route('zk.logs') }}" class="list-group-item list-group-item-action bg-transparent {{ Request::routeIs('zk.logs') ? 'active' : '' }}">
                     <i class="bi bi-clock-history"></i> Attendance Logs
                 </a>
+                <a href="{{ route('zk.connect') }}" class="list-group-item list-group-item-action bg-transparent {{ Request::routeIs('zk.connect') ? 'active' : '' }}">
+                    <i class="bi bi-router"></i> Device Info
+                </a>
                 <a href="#" class="list-group-item list-group-item-action bg-transparent mt-4 border-top text-danger" onclick="alert('Settings module pending implementation.')">
                     <i class="bi bi-gear"></i> Settings
                 </a>
@@ -231,7 +234,7 @@
                         <ul class="navbar-nav ms-auto mt-2 mt-lg-0 align-items-center">
                             <li class="nav-item me-3">
                                 <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-3 border border-success border-opacity-25">
-                                    <i class="bi bi-wifi me-2"></i>Device IP: 192.168.0.201
+                                    <i class="bi bi-wifi me-2"></i>Device IP: {{ env('ZK_DEVICE_IP', '192.168.0.201') }}
                                 </span>
                             </li>
                              <li class="nav-item">

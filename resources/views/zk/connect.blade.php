@@ -29,9 +29,9 @@
                     </div>
                 @endif
 
-                <div class="list-group list-group-flush border rounded-3 overflow-hidden">
+                <div class="list-group list-group-flush border rounded-3 overflow-hidden mb-4">
                     <div class="list-group-item d-flex justify-content-between align-items-center bg-light">
-                        <span class="text-muted small fw-bold text-uppercase">Configuration</span>
+                        <span class="text-muted small fw-bold text-uppercase">Connection Config</span>
                         <span><i class="bi bi-gear-fill text-muted"></i></span>
                     </div>
                     <div class="list-group-item d-flex justify-content-between align-items-center py-3">
@@ -47,6 +47,35 @@
                         <span class="badge bg-secondary">UDP</span>
                     </div>
                 </div>
+
+                @if($deviceInfo)
+                <div class="list-group list-group-flush border rounded-3 overflow-hidden">
+                    <div class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                        <span class="text-muted small fw-bold text-uppercase">Device Information</span>
+                        <span><i class="bi bi-cpu-fill text-muted"></i></span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted">Device Name</span>
+                        <span class="fw-bold">{{ $deviceInfo['device_name'] }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted">Serial Number</span>
+                        <span class="fw-bold font-monospace">{{ $deviceInfo['serial_number'] }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted">Firmware Version</span>
+                        <span class="fw-bold">{{ $deviceInfo['version'] }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted">Platform / OS</span>
+                        <span class="fw-bold">{{ $deviceInfo['platform'] }} / {{ $deviceInfo['os_version'] }}</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted">Device Time</span>
+                        <span class="fw-bold">{{ $deviceInfo['device_time'] }}</span>
+                    </div>
+                </div>
+                @endif
 
                 <div class="mt-4 text-center">
                     <a href="{{ route('zk.connect') }}" class="btn btn-primary rounded-pill px-4">
