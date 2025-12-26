@@ -9,32 +9,38 @@
     </div>
 
     <!-- Filter Toolbar -->
-    <form action="{{ route('zk.logs') }}" method="GET" class="bg-light border-bottom p-3">
-        <div class="row g-3 align-items-end">
-            <div class="col-auto">
-                <div class="btn-group">
-                    <a href="{{ route('zk.logs', ['filter' => 'today']) }}" class="btn btn-white border {{ request('filter') == 'today' || !request('filter') && !request('start_date') ? 'active bg-white text-primary border-primary' : '' }}">Today</a>
-                    <a href="{{ route('zk.logs', ['filter' => 'yesterday']) }}" class="btn btn-white border {{ request('filter') == 'yesterday' ? 'active bg-white text-primary border-primary' : '' }}">Yesterday</a>
+    <!-- Filter Toolbar -->
+    <div class="card-body border-bottom bg-white py-4 px-4">
+        <form action="{{ route('zk.logs') }}" method="GET">
+            <div class="row g-3 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small text-muted text-uppercase fw-bold">Quick Filters</label>
+                    <div class="btn-group d-block">
+                        <a href="{{ route('zk.logs', ['filter' => 'today']) }}" class="btn btn-outline-light text-dark {{ request('filter') == 'today' || !request('filter') && !request('start_date') ? 'active bg-primary text-white border-primary' : '' }}">Today</a>
+                        <a href="{{ route('zk.logs', ['filter' => 'yesterday']) }}" class="btn btn-outline-light text-dark {{ request('filter') == 'yesterday' ? 'active bg-primary text-white border-primary' : '' }}">Yesterday</a>
+                    </div>
+                </div>
+                <div class="col-auto ps-4">
+                    <label class="form-label small text-muted text-uppercase fw-bold">Date Range</label>
+                    <div class="input-group">
+                        <input type="date" name="start_date" class="form-control border-end-0" value="{{ request('start_date') }}">
+                        <span class="input-group-text bg-white border-start-0 border-end-0 text-muted px-2">to</span>
+                        <input type="date" name="end_date" class="form-control border-start-0" value="{{ request('end_date') }}">
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-dark px-4"><i class="bi bi-funnel me-1"></i> Apply Filter</button>
+                    <a href="{{ route('zk.logs') }}" class="btn btn-link text-muted text-decoration-none ms-2">Reset</a>
+                </div>
+                <div class="col text-end ms-auto">
+                     <label class="form-label d-block text-white">Action</label>
+                     <a href="{{ route('zk.logs.clear') }}" class="btn btn-danger text-white" onclick="return confirm('WARNING: This will delete ALL attendance records from the device permanently. This cannot be undone. Are you sure?');">
+                        <i class="bi bi-trash-fill me-1"></i> Clear Logs
+                    </a>
                 </div>
             </div>
-            <div class="col-auto border-start ps-4">
-                <div class="input-group">
-                    <input type="date" name="start_date" class="form-control" value="{{ request('start_date') }}">
-                    <span class="input-group-text bg-transparent border-start-0 border-end-0 text-muted">to</span>
-                    <input type="date" name="end_date" class="form-control" value="{{ request('end_date') }}">
-                </div>
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-dark"><i class="bi bi-funnel me-1"></i> Filter</button>
-                <a href="{{ route('zk.logs') }}" class="btn btn-link text-muted text-decoration-none">Reset</a>
-            </div>
-            <div class="col text-end">
-                    <a href="{{ route('zk.logs.clear') }}" class="btn btn-outline-danger" onclick="return confirm('WARNING: This will delete ALL attendance records from the device permanently. This cannot be undone. Are you sure?');">
-                    <i class="bi bi-trash-fill me-1"></i> Clear Logs
-                </a>
-            </div>
-        </div>
-    </form>
+        </form>
+    </div>
 
     <div class="table-responsive">
         <table class="table align-middle table-striped mb-0">

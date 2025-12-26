@@ -6,31 +6,51 @@
 <!-- Stats Overview -->
 <div class="row mb-5">
     <div class="col-md-4">
-        <div class="card stat-card">
-            <div class="stat-icon" style="background-color: #e0e7ff; color: #4338ca;">
-                <i class="bi bi-people-fill"></i>
+        <div class="card stat-card h-100 border-0">
+            <div class="d-flex align-items-center mb-3">
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary mb-0 me-3">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div>
+                     <h6 class="text-uppercase text-muted small fw-bold mb-1 ls-1">Total Users</h6>
+                     <h2 class="fw-bold mb-0 text-dark">{{ isset($users) ? count($users) : 0 }}</h2>
+                </div>
             </div>
-            <h6 class="text-muted text-uppercase mb-1" style="font-size: 0.75rem; letter-spacing: 0.05em;">Total Users</h6>
-            <h2 class="fw-bold mb-0">{{ isset($users) ? count($users) : 0 }}</h2>
+            <div class="mt-auto">
+                 <small class="text-success fw-medium"><i class="bi bi-arrow-up-short"></i> Active</small> <span class="text-muted small">on device</span>
+            </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card stat-card">
-            <div class="stat-icon" style="background-color: #dcfce7; color: #15803d;">
-                <i class="bi bi-fingerprint"></i>
+        <div class="card stat-card h-100 border-0">
+            <div class="d-flex align-items-center mb-3">
+                <div class="stat-icon bg-success bg-opacity-10 text-success mb-0 me-3">
+                    <i class="bi bi-fingerprint"></i>
+                </div>
+                <div>
+                    <h6 class="text-uppercase text-muted small fw-bold mb-1 ls-1">Logs (Today)</h6>
+                    <h2 class="fw-bold mb-0 text-dark" id="dashboardLogCount">{{ $todayLogsCount ?? 0 }}</h2>
+                </div>
             </div>
-            <h6 class="text-muted text-uppercase mb-1" style="font-size: 0.75rem; letter-spacing: 0.05em;">Logs (Today)</h6>
-            <!-- We can pass specialized counts from controller for Dashboard -->
-            <h2 class="fw-bold mb-0" id="dashboardLogCount">{{ $todayLogsCount ?? 0 }}</h2>
+            <div class="mt-auto">
+                <small class="text-muted small">Real-time updates enabled</small>
+            </div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card stat-card">
-            <div class="stat-icon" style="background-color: #fee2e2; color: #b91c1c;">
-                <i class="bi bi-cpu"></i>
+        <div class="card stat-card h-100 border-0">
+             <div class="d-flex align-items-center mb-3">
+                <div class="stat-icon bg-danger bg-opacity-10 text-danger mb-0 me-3">
+                    <i class="bi bi-cpu-fill"></i>
+                </div>
+                <div>
+                    <h6 class="text-uppercase text-muted small fw-bold mb-1 ls-1">Device Status</h6>
+                    <h2 class="fw-bold mb-0 text-dark">Online</h2>
+                </div>
             </div>
-            <h6 class="text-muted text-uppercase mb-1" style="font-size: 0.75rem; letter-spacing: 0.05em;">Device Platform</h6>
-            <h2 class="fw-bold mb-0">ZKTeco K50</h2>
+             <div class="mt-auto">
+                <small class="text-muted small">Device: ZKTeco K50</small>
+            </div>
         </div>
     </div>
 </div>

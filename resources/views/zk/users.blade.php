@@ -3,14 +3,15 @@
 @section('title', 'User Management')
 
 @section('content')
-<div class="card">
-    <div class="card-header bg-white py-3">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold mb-0">User Management</h5>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                <i class="bi bi-plus-lg me-2"></i>Add User
-            </button>
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0 py-4 px-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="fw-bold mb-1">User Management</h5>
+            <p class="text-muted small mb-0">Manage registered users and sync with device.</p>
         </div>
+        <button class="btn btn-primary btn-sm px-4 rounded-pill" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <i class="bi bi-plus-lg me-2"></i>Add User
+        </button>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">

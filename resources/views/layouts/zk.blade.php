@@ -12,47 +12,190 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; overflow-x: hidden; }
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --sidebar-bg: #1e1e2d; 
+            --sidebar-width: 280px;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f4f6f9; 
+            color: #333;
+            overflow-x: hidden; 
+        }
         
         #wrapper { display: flex; width: 100%; }
-        #sidebar-wrapper { min-height: 100vh; margin-left: -16rem; transition: margin .25s ease-out; width: 16rem; font-size: 0.95rem; }
-        #sidebar-wrapper .sidebar-heading { padding: 0.875rem 1.25rem; font-size: 1.2rem; font-weight: bold; color: #4338ca; }
-        #sidebar-wrapper .list-group { width: 16rem; }
-        #page-content-wrapper { min-width: 100vw; transition: margin .25s ease-out; }
         
+        /* Sidebar Styling */
+        #sidebar-wrapper { 
+            min-height: 100vh; 
+            margin-left: calc(-1 * var(--sidebar-width)); 
+            width: var(--sidebar-width); 
+            background-color: var(--sidebar-bg);
+            transition: margin .3s ease-in-out; 
+            z-index: 1000;
+        }
+        
+        #sidebar-wrapper .sidebar-heading { 
+            padding: 1.5rem; 
+            font-size: 1.25rem; 
+            font-weight: 700; 
+            color: #fff; 
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: rgba(0,0,0,0.1);
+            letter-spacing: 0.5px;
+        }
+        
+        #sidebar-wrapper .list-group { width: var(--sidebar-width); padding: 1rem 0; }
+        
+        .list-group-item { 
+            border: none; 
+            padding: 14px 24px; 
+            color: #a2a3b7; 
+            background: transparent; 
+            font-weight: 500; 
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        
+        .list-group-item:hover { 
+            background-color: rgba(255,255,255,0.03); 
+            color: #fff; 
+        }
+        
+        .list-group-item.active { 
+            background-color: rgba(79, 70, 229, 0.1); 
+            color: #7269ef; 
+            border-left: 3px solid #7269ef;
+        }
+        
+        .list-group-item i { 
+            width: 24px; 
+            display: inline-block; 
+            text-align: center; 
+            margin-right: 12px; 
+            font-size: 1.1rem;
+        }
+
+        /* Content Area */
+        #page-content-wrapper { 
+            min-width: 100vw; 
+            width: 100%;
+            transition: margin .3s ease-in-out; 
+        }
+        
+        /* Toggled State */
         body.sb-sidenav-toggled #wrapper #sidebar-wrapper { margin-left: 0; }
+        
         @media (min-width: 768px) {
             #sidebar-wrapper { margin-left: 0; }
             #page-content-wrapper { min-width: 0; width: 100%; }
-            body.sb-sidenav-toggled #wrapper #sidebar-wrapper { margin-left: -16rem; }
+            body.sb-sidenav-toggled #wrapper #sidebar-wrapper { margin-left: calc(-1 * var(--sidebar-width)); }
         }
 
-        .list-group-item { border: none; padding: 12px 20px; color: #4b5563; font-weight: 500; }
-        .list-group-item:hover { background-color: #f9fafb; color: #111827; }
-        .list-group-item.active { background-color: #4f46e5; color: white; }
-        .list-group-item i { width: 20px; display: inline-block; text-align: center; margin-right: 8px; }
+        /* Cards */
+        .card { 
+            border: none; 
+            border-radius: 10px; 
+            background: #ffffff;
+            box-shadow: 0 0 20px 0 rgba(76, 87, 125, 0.02);
+            margin-bottom: 24px; 
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .stat-card {
+            border-radius: 12px;
+            padding: 24px;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        }
 
-        .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); margin-bottom: 24px; transition: transform 0.2s;}
-        .card:hover { transform: translateY(-2px); }
-        .stat-card { background: white; padding: 24px; }
-        .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 16px; }
+        .stat-icon { 
+            width: 54px; 
+            height: 54px; 
+            border-radius: 10px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 26px; 
+            margin-bottom: 20px; 
+            transition: all 0.3s;
+        }
+
+        /* Navbar */
+        .navbar { 
+            background: #fff; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02); 
+            padding: 1rem 1.5rem; 
+        }
         
-        .navbar { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); background: white; padding: 0.75rem 1.5rem; }
+        .navbar .btn-outline-primary {
+            border-color: #eef0f8;
+            color: #7e8299;
+            background: #f5f8fa;
+        }
         
-        .table thead th { background-color: #f9fafb; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; color: #6b7280; padding: 12px 24px; border-bottom: 1px solid #e5e7eb; }
-        .table tbody td { padding: 16px 24px; vertical-align: middle; border-bottom: 1px solid #f3f4f6; }
-        .badge { padding: 6px 12px; border-radius: 9999px; font-weight: 500; font-size: 0.75rem; }
-        .badge-admin { background-color: #ede9fe; color: #5b21b6; }
-        .badge-user { background-color: #d1fae5; color: #065f46; }
+        .navbar .btn-outline-primary:hover {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+        }
+
+        /* Primary Button Override */
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        /* Table */
+        .table thead th { 
+            background-color: #f9f9f9; 
+            font-weight: 600; 
+            text-transform: uppercase; 
+            font-size: 0.75rem; 
+            letter-spacing: 0.05em; 
+            color: #b5b5c3; 
+            padding: 14px 20px; 
+            border-bottom: 1px solid #eff2f5; 
+        }
+        
+        .table tbody td { 
+            padding: 18px 20px; 
+            vertical-align: middle; 
+            border-bottom: 1px dashed #eff2f5;
+            color: #464e5f;
+            font-weight: 500;
+        }
+
+        /* Badges */
+        .badge { padding: 8px 12px; border-radius: 6px; font-weight: 600; font-size: 0.75rem; }
     </style>
+
 </head>
 <body>
 
     <div class="d-flex" id="wrapper">
         <!-- Sidebar -->
-        <div class="bg-white border-end" id="sidebar-wrapper">
-            <div class="sidebar-heading border-bottom bg-light">
-                <i class="bi bi-shield-lock-fill me-2"></i>Smart Access
+        <div id="sidebar-wrapper">
+            <div class="sidebar-heading">
+                <!-- Branding -->
+                <div class="d-flex align-items-center">
+                    <div class="rounded-3 bg-gradient bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; font-size: 20px;">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <span>Smart Access</span>
+                </div>
             </div>
             <div class="list-group list-group-flush py-2">
                 <a href="{{ route('zk.dashboard') }}" class="list-group-item list-group-item-action bg-transparent {{ Request::routeIs('zk.dashboard') ? 'active' : '' }}">

@@ -15,18 +15,17 @@ class ZktecoController extends Controller
      */
     public function connect()
     {
-        // IP Address of the ZKTeco device (CHANGE THIS TO YOUR DEVICE'S IP)
+        // IP Address of the ZKTeco device
         $ip = '192.168.0.201';
-        // Default UDP Port
         $port = 4370;
 
         $zk = new LaravelZkteco($ip, $port);
-
-        if ($zk->connect()) {
-            return response()->json(['message' => 'Connection Successful!', 'status' => true]);
-        }
-
-        return response()->json(['message' => 'Connection Failed. Please check IP and Network.', 'status' => false], 500);
+        $status = $zk->connect();
+        
+        // If connected, we might want to get specific info or just show status
+        // For now, simpler is better for "Connection Information"
+        
+        return view('zk.connect', compact('ip', 'port', 'status'));
     }
 
     /**

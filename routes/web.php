@@ -6,7 +6,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/zk/connect', [App\Http\Controllers\ZktecoController::class, 'connect']);
+Route::get('/zk/connect', [App\Http\Controllers\ZktecoController::class, 'connect'])->name('zk.connect');
 Route::get('/zk/users', [App\Http\Controllers\ZktecoController::class, 'getUsers']);
 Route::get('/zk/attendance', [App\Http\Controllers\ZktecoController::class, 'getAttendance']);
 Route::get('/zk/info', [App\Http\Controllers\ZktecoController::class, 'getDeviceInfo']);
