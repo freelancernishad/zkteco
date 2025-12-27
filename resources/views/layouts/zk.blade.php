@@ -26,7 +26,7 @@
             overflow-x: hidden; 
         }
         
-        #wrapper { display: flex; width: 100%; }
+        #wrapper { display: flex; width: 100%; flex-wrap: nowrap; }
         
         /* Sidebar Styling */
         #sidebar-wrapper { 
@@ -36,6 +36,7 @@
             background-color: var(--sidebar-bg);
             transition: margin .3s ease-in-out; 
             z-index: 1000;
+            flex-shrink: 0;
         }
         
         #sidebar-wrapper .sidebar-heading { 
@@ -82,7 +83,6 @@
 
         /* Content Area */
         #page-content-wrapper { 
-            min-width: 100vw; 
             width: 100%;
             transition: margin .3s ease-in-out; 
         }
@@ -92,7 +92,7 @@
         
         @media (min-width: 768px) {
             #sidebar-wrapper { margin-left: 0; }
-            #page-content-wrapper { min-width: 0; width: 100%; }
+            #page-content-wrapper { min-width: 0; width: 100%; flex: 1; }
             body.sb-sidenav-toggled #wrapper #sidebar-wrapper { margin-left: calc(-1 * var(--sidebar-width)); }
         }
 
@@ -233,7 +233,7 @@
                     <div class="collapse navbar-collapse" id="navbarSupportedContent">
                         <ul class="navbar-nav ms-auto mt-2 mt-lg-0 align-items-center">
                             <li class="nav-item me-3">
-                                <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-3 border border-success border-opacity-25">
+                                <span id="header-device-status-badge" class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-2 rounded-3 border border-secondary border-opacity-25">
                                     <i class="bi bi-wifi me-2"></i>Device IP: {{ env('ZK_DEVICE_IP', '192.168.0.201') }}
                                 </span>
                             </li>
@@ -381,6 +381,75 @@
                 .catch(e => console.error("Notification Poll Error", e));
         }, 5000);
 
+    </script>
+    
+    <script>
+        // Global Device Status Poller
+        (function() {
+            let statusPollInterval;
+            const headerBadge = document.getElementById('header-device-status-badge');
+            
+            // Dashboard elements (might not exist on all pages)
+            const dashboardStatusTitle = document.getElementById('dashboard-device-status-title');
+            const dashboardStatusText = document.getElementById('dashboard-device-status-text');
+            const dashboardStatusIcon = document.getElementById('dashboard-device-status-icon');
+            const dashboardStatusCard = document.getElementById('dashboard-device-status-card');
+
+            function updateGlobalStatusUI(isSuccess, data = null) {
+                // 1. Update Header Badge
+                if (headerBadge) {
+                     if (isSuccess) {
+                        headerBadge.className = 'badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-3 border border-success border-opacity-25';
+                        headerBadge.innerHTML = `<i class="bi bi-wifi me-2"></i>Device IP: {{ env('ZK_DEVICE_IP', '192.168.0.201') }} (Online)`;
+                     } else {
+                        headerBadge.className = 'badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-3 border border-danger border-opacity-25';
+                        headerBadge.innerHTML = `<i class="bi bi-wifi-off me-2"></i>Device IP: {{ env('ZK_DEVICE_IP', '192.168.0.201') }} (Offline)`;
+                     }
+                }
+
+                // 2. Update Dashboard Widget (if exists)
+                if (dashboardStatusTitle) {
+                    if (isSuccess) {
+                        dashboardStatusTitle.textContent = 'Online';
+                        if (dashboardStatusIcon) dashboardStatusIcon.className = 'stat-icon bg-success bg-opacity-10 text-success mb-0 me-3 rounded-circle';
+                        if (dashboardStatusCard) dashboardStatusCard.className = 'card stat-card h-100 border-0 border-start border-4 border-success shadow-sm';
+                        if (dashboardStatusText) dashboardStatusText.textContent = 'Connected';
+                    } else {
+                        dashboardStatusTitle.textContent = 'Offline';
+                        if (dashboardStatusIcon) dashboardStatusIcon.className = 'stat-icon bg-danger bg-opacity-10 text-danger mb-0 me-3 rounded-circle';
+                        if (dashboardStatusCard) dashboardStatusCard.className = 'card stat-card h-100 border-0 border-start border-4 border-danger shadow-sm';
+                        if (dashboardStatusText) dashboardStatusText.textContent = 'Unreachable';
+                    }
+                }
+            }
+
+            function checkGlobalDeviceStatus() {
+                fetch("{{ route('zk.info') }}")
+                    .then(response => response.json())
+                    .then(data => {
+                        let isSuccess = false;
+                        if (data.version && !data.message) {
+                             isSuccess = true;
+                        }
+                        
+                        updateGlobalStatusUI(isSuccess, data);
+                        scheduleGlobalPoll(isSuccess);
+                    })
+                    .catch(e => {
+                        updateGlobalStatusUI(false);
+                        scheduleGlobalPoll(false);
+                    });
+            }
+
+            function scheduleGlobalPoll(lastWasSuccess) {
+                clearTimeout(statusPollInterval);
+                const delay = lastWasSuccess ? 60000 : 10000; // 60s if good, 10s if bad
+                statusPollInterval = setTimeout(checkGlobalDeviceStatus, delay);
+            }
+
+            // Start immediately
+            checkGlobalDeviceStatus();
+        })();
     </script>
     
     @yield('scripts')

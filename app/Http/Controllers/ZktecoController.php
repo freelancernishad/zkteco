@@ -19,25 +19,9 @@ class ZktecoController extends Controller
         $ip = env('ZK_DEVICE_IP', '192.168.0.201');
         $port = env('ZK_DEVICE_PORT', 4370);
 
-        $zk = new LaravelZkteco($ip, $port);
-        $status = $zk->connect();
-        
+        // Don't connect here, let the frontend do it via AJAX
+        $status = null; 
         $deviceInfo = null;
-        if ($status) {
-            $zk->disableDevice();
-            $deviceInfo = [
-                'version' => $zk->version(),
-                'device_name' => $zk->deviceName(),
-                'serial_number' => $zk->serialNumber(),
-                'platform' => $zk->platform(),
-                'os_version' => $zk->osVersion(),
-                'work_code' => $zk->workCode(),
-                'ssr' => $zk->ssr(),
-                'pin_width' => $zk->pinWidth(),
-                'device_time' => $zk->getTime()
-            ];
-            $zk->enableDevice();
-        }
         
         return view('zk.connect', compact('ip', 'port', 'status', 'deviceInfo'));
     }
@@ -89,6 +73,24 @@ class ZktecoController extends Controller
         $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
         $port = env('ZK_DEVICE_PORT', 4370);
 
+        // 1. Manual Diagnostic Check
+        $fp = @fsockopen($ip, $port, $errno, $errstr, 2); // 2 second timeout
+        if (!$fp) {
+            $e_msg = "Connection Failed: ";
+            if ($errno == 10060 || str_contains($errstr, 'timed out')) {
+                $e_msg .= "Device Unreachable (Timeout). Check if device is ON and network is connected.";
+            } elseif ($errno == 10061 || str_contains($errstr, 'refused')) {
+                $e_msg .= "Connection Refused. Device IP is reachable but Port $port is closed/mismatch.";
+            } elseif (str_contains($errstr, 'host')) {
+                $e_msg .= "Host Unreachable. Check IP Address configuration.";
+            } else {
+                $e_msg .= "$errstr ($errno)";
+            }
+            return response()->json(['message' => $e_msg], 500);
+        }
+        fclose($fp);
+
+        // 2. Library Connection
         $zk = new LaravelZkteco($ip, $port);
 
         if ($zk->connect()) {
@@ -101,11 +103,11 @@ class ZktecoController extends Controller
                 'work_code' => $zk->workCode(),
                 'ssr' => $zk->ssr(),
                 'pin_width' => $zk->pinWidth(),
-                'device_time' => $zk->getTime() // Added check
+                'device_time' => $zk->getTime()
             ]);
         }
 
-        return response()->json(['message' => 'Connection Failed.'], 500);
+        return response()->json(['message' => 'Connected to Socket but Protocol Handshake Failed.'], 500);
     }
     
 
@@ -116,18 +118,19 @@ class ZktecoController extends Controller
         $port = env('ZK_DEVICE_PORT', 4370);
         $zk = new LaravelZkteco($ip, $port);
         
-        // Fetch Users Live for Count
-        $users = [];
-        if ($zk->connect()) {
-             $zk->disableDevice();
-             $users = $zk->getUser();
-             $zk->enableDevice();
-        }
+        // Fetch Users Live for Count - REMOVED SYNC CHECK
+        // We will rely on DB count or separate API call if needed, 
+        // strictly avoiding blocking main page load for device connection.
+        $users = []; 
+        // Logic moved to separate API if needed, or just use DB users.
         
         // Count Today's Logs from DB
         $todayLogsCount = Attendance::whereDate('timestamp', date('Y-m-d'))->count();
+        
+        // Recent 5 Logs
+        $recentLogs = Attendance::with('user')->orderBy('timestamp', 'desc')->take(5)->get();
 
-        return view('zk.dashboard', compact('users', 'todayLogsCount'));
+        return view('zk.dashboard', compact('users', 'todayLogsCount', 'recentLogs'));
     }
 
     public function users()
