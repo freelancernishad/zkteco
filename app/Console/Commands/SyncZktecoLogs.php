@@ -89,17 +89,25 @@ class SyncZktecoLogs extends Command
                     $newCount++;
 
                     // Trigger Webhook if configured
-                    $webhookUrl = env('ZK_WEBHOOK_URL');
+                    $webhookUrl = config('services.zk.webhook_url');
+                    
                     if ($webhookUrl) {
+                        Log::info("ZK Sync: Triggering webhook for User ID: " . $log['id'] . " to URL: " . $webhookUrl);
                         try {
                             $user = ZkUser::where('userid', $log['id'])->first();
                             
-                            Http::timeout(5)->post($webhookUrl, [
+                            if ($user) {
+                                Log::info("ZK Sync: Found user " . $user->name . " in database.");
+                            } else {
+                                Log::warn("ZK Sync: User ID " . $log['id'] . " not found in ZkUser table.");
+                            }
+                            
+                            $response = Http::timeout(10)->post($webhookUrl, [
                                 'event' => 'attendance.created',
                                 'data' => [
-                                    'user_id' => $log['id'], // User Badge ID
+                                    'user_id' => $log['id'],
                                     'timestamp' => $log['timestamp'],
-                                    'state' => $log['state'], // 1=Out, 0/Other=In usually
+                                    'state' => $log['state'],
                                     'type' => $log['type'],
                                     'device_uid' => $log['uid'],
                                     'user' => $user ? [
@@ -110,10 +118,18 @@ class SyncZktecoLogs extends Command
                                     ] : null
                                 ]
                             ]);
+
+                            if ($response->successful()) {
+                                Log::info("ZK Sync: Webhook sent successfully to " . $webhookUrl . " (Status: " . $response->status() . ")");
+                            } else {
+                                Log::error("ZK Sync: Webhook failed. URL: " . $webhookUrl . " | Status: " . $response->status() . " | Body: " . $response->body());
+                            }
                         } catch (\Exception $e) {
-                            // Log error but don't stop sync
+                            Log::error("ZK Sync: Webhook Exception: " . $e->getMessage());
                             $this->error("Webhook Failed: " . $e->getMessage());
                         }
+                    } else {
+                        Log::debug("ZK Sync: ZK_WEBHOOK_URL is not configured in .env.");
                     }
                 }
             }

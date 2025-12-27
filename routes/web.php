@@ -18,6 +18,10 @@ Route::get('/zk/user/delete/{uid}', [App\Http\Controllers\ZktecoController::clas
 Route::get('/zk/clear-logs', [App\Http\Controllers\ZktecoController::class, 'clearLogs'])->name('zk.logs.clear');
 Route::get('/zk/sync', [App\Http\Controllers\ZktecoController::class, 'forceSync'])->name('zk.force.sync');
 Route::get('/zk/api/logs', [App\Http\Controllers\ZktecoController::class, 'getLogsJson'])->name('zk.api.logs');
+Route::get('/zk/students', [App\Http\Controllers\ZktecoController::class, 'students'])->name('zk.students');
+Route::get('/zk/students/sync/{id}', [App\Http\Controllers\ZktecoController::class, 'syncStudent'])->name('zk.students.sync');
+Route::post('/zk/students/sync-class', [App\Http\Controllers\ZktecoController::class, 'syncClass'])->name('zk.students.sync.class');
+
 
 
 Route::post('checkwebhook',function (Request $request){

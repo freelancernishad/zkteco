@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'zk' => [
+        'webhook_url' => env('ZK_WEBHOOK_URL'),
+    ],
+
 ];

@@ -180,6 +180,23 @@
 
         /* Badges */
         .badge { padding: 8px 12px; border-radius: 6px; font-weight: 600; font-size: 0.75rem; }
+
+        /* Premium UI Utilities */
+        .fw-800 { font-weight: 800; }
+        .ls-1 { letter-spacing: 1px; }
+        .ls-2 { letter-spacing: 2px; }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+
+        .br-24 { border-radius: 24px; }
     </style>
 
 </head>
@@ -206,6 +223,9 @@
                 </a>
                 <a href="{{ route('zk.logs') }}" class="list-group-item list-group-item-action bg-transparent {{ Request::routeIs('zk.logs') ? 'active' : '' }}">
                     <i class="bi bi-clock-history"></i> Attendance Logs
+                </a>
+                <a href="{{ route('zk.students') }}" class="list-group-item list-group-item-action bg-transparent {{ Request::routeIs('zk.students') ? 'active' : '' }}">
+                    <i class="bi bi-mortarboard"></i> Students
                 </a>
                 <a href="{{ route('zk.connect') }}" class="list-group-item list-group-item-action bg-transparent {{ Request::routeIs('zk.connect') ? 'active' : '' }}">
                     <i class="bi bi-router"></i> Device Info
@@ -345,41 +365,9 @@
         // Let's try to fetch recent logs every 5 seconds globally to check for notifications
         let globalLastTimestamp = null;
 
-        setInterval(function() {
-            // We use the logs API just for checking new stuff.
-            // We don't filter here, just get latest.
-            fetch("{{ route('zk.api.logs') }}") 
-                .then(response => response.json())
-                .then(data => {
-                    if (data.data.length > 0) {
-                        // Init timestamp
-                        if (!globalLastTimestamp) {
-                            globalLastTimestamp = data.data[0].timestamp;
-                            return;
-                        }
-
-                        // Check new logs
-                        const newLogs = data.data.filter(log => log.timestamp > globalLastTimestamp);
-                        
-                        if (newLogs.length > 0) {
-                            [...newLogs].reverse().forEach(log => {
-                                // Try to find name from API object, else Map, else ID
-                                const userName = (log.user && log.user.name) ? log.user.name : (globalUserMap[log.user_id] || "User " + log.user_id);
-                                const stateText = log.state == 1 ? "Checked Out" : "Checked In";
-                                showToast(userName, stateText);
-                            });
-                            
-                            globalLastTimestamp = data.data[0].timestamp;
-                        }
-                    }
-                    
-                    // Note: If we are on the Logs Page, that page has its OWN poller for Table updates.
-                    // This global one is just for toasts. 
-                    // To avoid double fetching, we could coordinate, but for now 2 requests every 5s is fine.
-                    
-                })
-                .catch(e => console.error("Notification Poll Error", e));
-        }, 5000);
+        // Note: Global log polling removed in favor of WebSocket (AttendanceSynced).
+        // Device status polling remains for system health visibility.
+    </script>
 
     </script>
     

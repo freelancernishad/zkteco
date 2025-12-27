@@ -112,26 +112,68 @@ class ZktecoController extends Controller
     
 
     public function index()
-    {
-        // 1. Dashboard Overview
-        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
-        $port = env('ZK_DEVICE_PORT', 4370);
-        $zk = new LaravelZkteco($ip, $port);
-        
-        // Fetch Users Live for Count - REMOVED SYNC CHECK
-        // We will rely on DB count or separate API call if needed, 
-        // strictly avoiding blocking main page load for device connection.
-        $users = []; 
-        // Logic moved to separate API if needed, or just use DB users.
-        
-        // Count Today's Logs from DB
-        $todayLogsCount = Attendance::whereDate('timestamp', date('Y-m-d'))->count();
-        
-        // Recent 5 Logs
-        $recentLogs = Attendance::with('user')->orderBy('timestamp', 'desc')->take(5)->get();
+{
+    // 1. Dashboard Overview
+    $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+    $port = env('ZK_DEVICE_PORT', 4370);
+    $zk = new LaravelZkteco($ip, $port);
+    
+    // Auto-Sync Users on Page Load (Keeping DB consistent with Machine)
+    try {
+        if ($zk->connect()) {
+            $deviceUsers = $zk->getUser(); // Get all users from machine
+            $deviceUserIds = [];
 
-        return view('zk.dashboard', compact('users', 'todayLogsCount', 'recentLogs'));
+            foreach ($deviceUsers as $user) {
+                $deviceUserIds[] = (string)$user['userid'];
+                
+                // Update or create in local DB
+                ZkUser::updateOrCreate(
+                    ['userid' => (string)$user['userid']],
+                    [
+                        'uid' => $user['uid'],
+                        'name' => $user['name'],
+                        'role' => $user['role'],
+                        'password' => $user['password'] ?? '',
+                        'cardno' => $user['cardno'] ?? 0,
+                    ]
+                );
+            }
+
+            // DELETE users from local DB that are NO LONGER on the device
+            ZkUser::whereNotIn('userid', $deviceUserIds)->delete();
+            
+            \Illuminate\Support\Facades\Log::info("Dashboard: Synchronized " . count($deviceUserIds) . " users from device.");
+        }
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error("Dashboard Sync Error: " . $e->getMessage());
     }
+    
+    // Fetch Device Users count from DB
+    $usersCount = ZkUser::count();
+    
+    // Fetch Total Students from API (Cached for performance)
+    $totalStudents = \Illuminate\Support\Facades\Cache::remember('zk_total_students', 600, function () {
+        try {
+            $response = \Illuminate\Support\Facades\Http::get('https://tmscedu.com/api/all/students');
+            if ($response->successful()) {
+                return count($response->json()['data'] ?? []);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Dashboard: Student count API failed: " . $e->getMessage());
+        }
+        return 0;
+    });
+    
+    // Count Today's Logs from DB
+    $todayLogsCount = Attendance::whereDate('timestamp', date('Y-m-d'))->count();
+    
+    // Recent 5 Logs
+    $recentLogs = Attendance::with('user')->orderBy('timestamp', 'desc')->take(5)->get();
+
+    return view('zk.dashboard', compact('usersCount', 'totalStudents', 'todayLogsCount', 'recentLogs'));
+}
+
 
     public function users()
     {
@@ -273,4 +315,174 @@ class ZktecoController extends Controller
 
         return redirect()->back()->with('error', 'Device Connection Failed');
     }
+
+    /**
+     * Display a listing of students from external API.
+     */
+    public function students(Request $request)
+    {
+        try {
+            $response = \Illuminate\Support\Facades\Http::get('https://tmscedu.com/api/all/students');
+            
+            if (!$response->successful()) {
+                return view('zk.students')->with('error', 'Failed to fetch student data from external server.');
+            }
+
+            $allData = $response->json();
+            $students = $allData['data'] ?? [];
+            
+            // Extract unique classes for filter dropdown
+            $classes = collect($students)->pluck('StudentClass')->unique()->sort()->values()->all();
+
+            // We will now handle ALL filtering (Search & Class) on the client side via JS 
+            // to avoid page reloads as requested by the user.
+            
+            return view('zk.students', compact('students', 'classes'));
+        } catch (\Exception $e) {
+            return view('zk.students')->with('error', 'Error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Sync a single student to the device and local DB.
+     */
+    public function syncStudent($id)
+    {
+        try {
+            \Illuminate\Support\Facades\Log::info("ZK Sync: Individual sync requested for student ID: " . $id);
+            
+            $response = \Illuminate\Support\Facades\Http::get('https://tmscedu.com/api/all/students');
+            if (!$response->successful()) {
+                \Illuminate\Support\Facades\Log::error("ZK Sync: API request failed (Individual). Status: " . $response->status());
+                return redirect()->back()->with('error', 'API Failure');
+            }
+
+            $students = $response->json()['data'] ?? [];
+            $student = collect($students)->firstWhere('id', $id);
+            
+            if (!$student) {
+                \Illuminate\Support\Facades\Log::error("ZK Sync: Student ID " . $id . " not found in API response.");
+                return redirect()->back()->with('error', 'Student not found in API');
+            }
+
+            $displayName = ($student['StudentNameEn'] ?? $student['StudentName']) . ' (' . $student['StudentClass'] . ')';
+            \Illuminate\Support\Facades\Log::info("ZK Sync: Prepared name: " . $displayName);
+
+            $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+            $port = env('ZK_DEVICE_PORT', 4370);
+            $zk = new LaravelZkteco($ip, $port);
+
+            if ($zk->connect()) {
+                \Illuminate\Support\Facades\Log::info("ZK Sync: Connected to device " . $ip);
+                $zk->disableDevice();
+                
+                // Use a random UID to avoid conflicts, but keep student ID as userid (Badge No)
+                $uid = rand(1000, 65000); 
+                $userid = (string)$student['id'];
+                
+                \Illuminate\Support\Facades\Log::info("ZK Sync: Attempting setUser with UID: {$uid}, UserID: {$userid}, Name: {$displayName}");
+                
+                // uid (int), userid (string), name, password, role, cardno
+                $result = $zk->setUser($uid, $userid, $displayName, '', 0, 0);
+                \Illuminate\Support\Facades\Log::info("ZK Sync: Device setUser result: " . ($result ? 'Success' : 'Failed'));
+                $zk->enableDevice();
+
+                // Sync to local ZkUser DB
+                ZkUser::updateOrCreate(
+                    ['userid' => $userid],
+                    [
+                        'uid' => $uid,
+                        'name' => $displayName,
+                        'role' => 0,
+                        'cardno' => 0,
+                    ]
+                );
+
+                return redirect()->back()->with('success', "Student {$displayName} created as user successfully (Badge ID: {$userid})!");
+            }
+
+            \Illuminate\Support\Facades\Log::error("ZK Sync: Device connection failed for IP: " . $ip);
+            return redirect()->back()->with('error', 'Device Connection Failed');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("ZK Sync: Exception in syncStudent: " . $e->getMessage());
+            return redirect()->back()->with('error', "Error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Sync an entire class to the device and local DB.
+     */
+    public function syncClass(Request $request)
+    {
+        $class = $request->class;
+        if (!$class) return redirect()->back()->with('error', 'No class selected');
+
+        try {
+            \Illuminate\Support\Facades\Log::info("ZK Sync: Bulk sync requested for class: " . $class);
+            
+            $response = \Illuminate\Support\Facades\Http::get('https://tmscedu.com/api/all/students');
+            if (!$response->successful()) {
+                \Illuminate\Support\Facades\Log::error("ZK Sync: API request failed (Bulk). Status: " . $response->status());
+                return redirect()->back()->with('error', 'API Failure');
+            }
+
+            $allStudents = $response->json()['data'] ?? [];
+            $classStudents = collect($allStudents)->where('StudentClass', $class);
+
+            if ($classStudents->isEmpty()) {
+                \Illuminate\Support\Facades\Log::warn("ZK Sync: No students found for class: " . $class);
+                return redirect()->back()->with('error', 'No students found in this class');
+            }
+
+            $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+            $port = env('ZK_DEVICE_PORT', 4370);
+            $zk = new LaravelZkteco($ip, $port);
+
+            if ($zk->connect()) {
+                \Illuminate\Support\Facades\Log::info("ZK Sync: Connected to device " . $ip . " for bulk sync.");
+                $zk->disableDevice();
+                $count = 0;
+                $errors = 0;
+                foreach ($classStudents as $student) {
+                    $displayName = ($student['StudentNameEn'] ?? $student['StudentName']) . ' (' . $student['StudentClass'] . ')';
+                    
+                    // Use a random UID to avoid conflicts, but keep student ID as userid (Badge No)
+                    $uid = rand(1000, 65000); 
+                    $userid = (string)$student['id'];
+                    
+                    $result = $zk->setUser($uid, $userid, $displayName, '', 0, 0);
+                    
+                    if ($result) {
+                        ZkUser::updateOrCreate(
+                            ['userid' => $userid],
+                            [
+                                'uid' => $uid,
+                                'name' => $displayName,
+                                'role' => 0,
+                                'cardno' => 0,
+                            ]
+                        );
+                        $count++;
+                    } else {
+                        \Illuminate\Support\Facades\Log::error("ZK Sync: Failed to set user for Student ID: " . $student['id'] . " Name: " . $displayName);
+                        $errors++;
+                    }
+                }
+                $zk->enableDevice();
+
+                if ($errors > 0) {
+                    return redirect()->back()->with('warning', "Sync completed with issues. {$count} success, {$errors} failures.");
+                }
+                return redirect()->back()->with('success', "Bulk Sync Complete! {$count} students from class '{$class}' added to device.");
+            }
+
+            \Illuminate\Support\Facades\Log::error("ZK Sync: Device connection failed (Bulk) for IP: " . $ip);
+            return redirect()->back()->with('error', 'Device Connection Failed');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("ZK Sync: Exception in syncClass: " . $e->getMessage());
+            return redirect()->back()->with('error', "Error: " . $e->getMessage());
+        }
+    }
 }
+
+
