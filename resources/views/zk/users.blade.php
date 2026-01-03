@@ -32,7 +32,7 @@
                         <tr id="user-row-{{ $user->uid }}">
                             <td class="fw-bold text-secondary ps-4">#{{ $user->uid }}</td>
                             <td><span class="badge bg-light text-dark border">{{ $user->userid }}</span></td>
-                            <td class="fw-bold">{{ $user->name }}</td>
+                            <td class="fw-bold" id="user-name-{{ $user->uid }}">{{ $user->name }}</td>
                             <td>
                                 @if($user->role == 14) 
                                     <span class="badge badge-admin">Admin</span>
@@ -53,6 +53,9 @@
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-sm btn-outline-info" onclick="checkFingerprint('{{ $user->uid }}')">
                                         <i class="bi bi-fingerprint me-1"></i> Check Fingerprint
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="editUser('{{ $user->uid }}', '{{ $user->name }}')">
+                                        <i class="bi bi-pencil"></i>
                                     </button>
                                     <button type="button" id="delete-btn-{{ $user->uid }}" class="btn btn-sm btn-outline-danger" onclick="deleteUser('{{ $user->uid }}', '{{ $user->name }}')">
                                         <i class="bi bi-trash"></i>
@@ -122,6 +125,32 @@
     </div>
 </div>
 
+<!-- Modal: Edit User -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Edit User Name on Device</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editUid">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="editNameInput" class="form-control" placeholder="e.g. John Doe" required>
+                </div>
+                <div class="alert alert-warning small mb-0">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Changing the name here will update it on the ZKTeco device immediately.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="saveEditBtn" class="btn btn-primary" onclick="saveUserEdit()">Update Name</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -183,6 +212,58 @@
             btn.innerHTML = originalContent;
             btn.disabled = false;
             showToast('Failed to connect to server.', 'Error', 'error');
+        });
+    }
+
+    let editModalObj = null;
+
+    function editUser(uid, currentName) {
+        if (!editModalObj) {
+            editModalObj = new bootstrap.Modal(document.getElementById('editUserModal'));
+        }
+        document.getElementById('editUid').value = uid;
+        document.getElementById('editNameInput').value = currentName;
+        editModalObj.show();
+    }
+
+    function saveUserEdit() {
+        const uid = document.getElementById('editUid').value;
+        const newName = document.getElementById('editNameInput').value;
+        const saveBtn = document.getElementById('saveEditBtn');
+        const originalContent = saveBtn.innerHTML;
+
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Updating...';
+        saveBtn.disabled = true;
+
+        fetch('/zk/user/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                uid: uid,
+                name: newName
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById(`user-name-${uid}`).innerText = data.name;
+                showToast(data.message, 'Updated', 'success');
+                editModalObj.hide();
+            } else {
+                showToast(data.message, 'Error', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Failed to connect to server.', 'Error', 'error');
+        })
+        .finally(() => {
+            saveBtn.innerHTML = originalContent;
+            saveBtn.disabled = false;
         });
     }
 </script>
