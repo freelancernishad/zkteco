@@ -51,8 +51,11 @@
                             </td>
                             <td>
                                 <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-success" onclick="registerFingerprint('{{ $user->uid }}', '{{ $user->userid }}', '{{ $user->name }}')">
+                                        <i class="bi bi-plus-circle me-1"></i> Add Finger
+                                    </button>
                                     <button class="btn btn-sm btn-outline-info" onclick="checkFingerprint('{{ $user->uid }}')">
-                                        <i class="bi bi-fingerprint me-1"></i> Check Fingerprint
+                                        <i class="bi bi-fingerprint me-1"></i> Check
                                     </button>
                                     <button class="btn btn-sm btn-outline-warning" onclick="editUser('{{ $user->uid }}', '{{ $user->name }}')">
                                         <i class="bi bi-pencil"></i>
@@ -146,6 +149,60 @@
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" id="saveEditBtn" class="btn btn-primary" onclick="saveUserEdit()">Update Name</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Register Fingerprint Instructions -->
+<div class="modal fade" id="registerFingerprintModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content overflow-hidden border-0 shadow">
+            <div class="modal-header bg-success text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-fingerprint me-2"></i>Register Fingerprint</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="display-6 fw-bold text-success mb-1" id="regUserName">User Name</div>
+                    <div class="badge bg-light text-dark border px-3 py-2">Badge ID: <span id="regBadgeId" class="fw-bold">0000</span></div>
+                </div>
+
+                <div class="instruction-steps">
+                    <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Device Enrollment Steps:</h6>
+                    <div class="d-flex mb-3">
+                        <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center me-3 shrink-0" style="min-width: 30px; height: 30px;">1</div>
+                        <div class="text-muted small">Go to the **ZKTeco Device** and press **M/OK** to enter Menu.</div>
+                    </div>
+                    <div class="d-flex mb-3">
+                        <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center me-3 shrink-0" style="min-width: 30px; height: 30px;">2</div>
+                        <div class="text-muted small">Navigate to **User Mgt** → **All Users**.</div>
+                    </div>
+                    <div class="d-flex mb-3">
+                        <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center me-3 shrink-0" style="min-width: 30px; height: 30px;">3</div>
+                        <div class="text-muted small">Select user with Badge ID <b class="text-dark" id="stepBadgeId">0000</b> and press **M/OK**.</div>
+                    </div>
+                    <div class="d-flex mb-3">
+                        <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center me-3 shrink-0" style="min-width: 30px; height: 30px;">4</div>
+                        <div class="text-muted small">Select **Edit** → **FP** (or Register Fingerprint).</div>
+                    </div>
+                    <div class="d-flex mb-0">
+                        <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center me-3 shrink-0" style="min-width: 30px; height: 30px;">5</div>
+                        <div class="text-muted small">Press your finger **3 times** on the sensor until the device saves.</div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="d-grid">
+                    <button type="button" class="btn btn-outline-primary fw-bold py-2" id="checkFpInModalBtn">
+                        <i class="bi bi-arrow-repeat me-2"></i> Verify Registration Status
+                    </button>
+                    <div id="modalFpStatus" class="text-center mt-2 small fw-bold"></div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -266,6 +323,54 @@
             saveBtn.disabled = false;
         });
     }
+
+    let registerModalObj = null;
+    let currentRegUid = null;
+
+    function registerFingerprint(uid, userid, name) {
+        if (!registerModalObj) {
+            registerModalObj = new bootstrap.Modal(document.getElementById('registerFingerprintModal'));
+        }
+        
+        currentRegUid = uid;
+        document.getElementById('regUserName').textContent = name;
+        document.getElementById('regBadgeId').textContent = userid;
+        document.getElementById('stepBadgeId').textContent = userid;
+        document.getElementById('modalFpStatus').innerHTML = '';
+        
+        registerModalObj.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkBtnInModal = document.getElementById('checkFpInModalBtn');
+        if (checkBtnInModal) {
+            checkBtnInModal.addEventListener('click', function() {
+                if (!currentRegUid) return;
+                
+                const originalContent = this.innerHTML;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Verifying...';
+                this.disabled = true;
+                
+                checkFingerprint(currentRegUid); // Use existing logic to update main table
+                
+                // Also update modal UI
+                fetch(`/zk/user/fingerprint/${currentRegUid}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const statusDiv = document.getElementById('modalFpStatus');
+                        if (data.status === 'added') {
+                            statusDiv.innerHTML = '<span class="text-success fs-6"><i class="bi bi-check-circle-fill"></i> Success! Fingerprint has been added.</span>';
+                        } else {
+                            statusDiv.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle-fill"></i> Still not detected. Please follow the steps above.</span>';
+                        }
+                    })
+                    .finally(() => {
+                        this.innerHTML = originalContent;
+                        this.disabled = false;
+                    });
+            });
+        }
+    });
 </script>
 
 <style>
