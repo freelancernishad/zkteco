@@ -4,17 +4,25 @@
 
 @section('content')
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-transparent border-0 py-4 px-4 d-flex justify-content-between align-items-center">
+    <div class="card-header bg-white border-bottom py-4 px-4 d-flex justify-content-between align-items-center sticky-top shadow-sm" style="top: 72px; z-index: 900;">
         <div>
             <h5 class="fw-bold mb-1">User Management</h5>
             <p class="text-muted small mb-0">Manage registered users and sync with device.</p>
         </div>
-        <button class="btn btn-primary btn-sm px-4 rounded-pill" data-bs-toggle="modal" data-bs-target="#addUserModal">
-            <i class="bi bi-plus-lg me-2"></i>Add User
-        </button>
+        <div class="d-flex align-items-center gap-3">
+            <div class="input-group input-group-sm" style="width: 250px;">
+                <span class="input-group-text bg-white border-end-0 text-muted">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" id="userListSearch" class="form-control border-start-0 ps-0" placeholder="Search name or ID...">
+            </div>
+            <button class="btn btn-primary btn-sm px-4 rounded-pill" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                <i class="bi bi-plus-lg me-2"></i>Add User
+            </button>
+        </div>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
+        <div class="">
             <table class="table align-middle mb-0">
                 <thead>
                     <tr>
@@ -342,6 +350,26 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Search Functionality
+        const searchInput = document.getElementById('userListSearch');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                const query = this.value.toLowerCase().trim();
+                const tableRows = document.querySelectorAll('tbody tr:not(.text-center)');
+                
+                tableRows.forEach(row => {
+                    const name = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                    const badge = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                    
+                    if (name.includes(query) || badge.includes(query)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+
         const checkBtnInModal = document.getElementById('checkFpInModalBtn');
         if (checkBtnInModal) {
             checkBtnInModal.addEventListener('click', function() {
@@ -378,6 +406,23 @@
         opacity: 0;
         transform: translateX(20px);
         transition: all 0.5s ease;
+    }
+
+    /* Sticky Header refined stacking */
+    .card-header.sticky-top {
+        top: 72px; 
+        z-index: 990;
+        background-color: #fff;
+    }
+
+    /* Sticky Table Header (Page Level) */
+    .table thead th {
+        position: sticky;
+        top: 160px; /* Navbar (72px) + Card Header (~88px) */
+        background-color: #f8f9fa !important;
+        z-index: 980;
+        border-bottom: 2px solid #dee2e6 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 </style>
 @endsection

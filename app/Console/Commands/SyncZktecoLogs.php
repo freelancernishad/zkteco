@@ -67,6 +67,7 @@ class SyncZktecoLogs extends Command
             //$this->info('Fetching attendance logs...');
             // Connection is still open
             $attendance = $zk->getAttendance();
+            Log::info($attendance);
             
             Log::info("ZK Sync: Fetched " . count($attendance) . " records from device.");
             

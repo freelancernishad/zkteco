@@ -5,9 +5,9 @@
 @section('content')
 <div class="row mb-5">
     <div class="col-12">
-        <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 15px;">
+        <div class="card border-0 shadow-sm" style="border-radius: 15px;">
             <div class="card-body p-0">
-                <div class="p-4 bg-white border-bottom d-flex flex-wrap justify-content-between align-items-center gap-4">
+                <div class="p-4 bg-white border-bottom d-flex flex-wrap justify-content-between align-items-center gap-4 sticky-top shadow-sm" style="top: 72px; z-index: 1010;">
                     <div>
                         <h4 class="fw-800 mb-1 text-dark">Student Directory</h4>
                         <p class="text-muted small mb-0">Total Students: <span class="badge bg-primary bg-opacity-10 text-primary" id="totalCountBadge">...</span></p>
@@ -36,7 +36,7 @@
                 </div>
 
                 <!-- Bulk Action Bar (Controlled by JS) -->
-                <div id="bulkSyncBar" class="px-4 py-3 bg-primary bg-opacity-10 border-bottom d-flex align-items-center justify-content-between d-none transition-all">
+                <div id="bulkSyncBar" class="px-4 py-3 bg-primary bg-opacity-10 border-bottom d-flex align-items-center justify-content-between d-none transition-all sticky-top" style="top: 160px; z-index: 1005;">
                     <div class="d-flex align-items-center text-primary fw-bold">
                         <i class="bi bi-info-circle-fill me-2 anim-pulse"></i>
                         <span>Ready to sync Class: <span id="selectedClassName" class="text-uppercase mx-1"></span> (<span id="filteredCount">0</span> students)</span>
@@ -57,11 +57,11 @@
                     <p class="text-muted">Please try again later or check your internet connection.</p>
                 </div>
                 @else
-                <div class="table-responsive">
+                <div class="">
                     <table class="table align-middle table-hover mb-0" id="studentTable">
                         <thead class="bg-light bg-opacity-50">
                             <tr>
-                                <th class="ps-4 text-uppercase small text-muted fw-bold py-3" style="width: 80px;">Badge ID</th>
+                                <th class="ps-4 text-uppercase small text-muted fw-bold py-3" style="width: 120px;">Badge ID</th>
                                 <th class="text-uppercase small text-muted fw-bold py-3">Student Full Name</th>
                                 <th class="text-uppercase small text-muted fw-bold py-3">Class</th>
                                 <th class="text-uppercase small text-muted fw-bold py-3 text-end pe-4">Actions</th>
@@ -199,11 +199,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update UI for bulk sync bar
         if (selectedClass) {
             bulkSyncBar.classList.remove('d-none');
+            document.body.classList.add('has-bulk-bar');
             selectedClassName.textContent = selectedClass;
             bulkSyncClassInput.value = selectedClass;
             filteredCount.textContent = filtered.length;
         } else {
             bulkSyncBar.classList.add('d-none');
+            document.body.classList.remove('has-bulk-bar');
         }
     }
 
@@ -272,5 +274,24 @@ window.createUser = function(studentId, studentName) {
         70% { transform: scale(1.05); opacity: 1; }
         100% { transform: scale(0.95); opacity: 0.7; }
     }
+
+    /* Refined Sticky Headers for Students (Page Level) */
+    #studentTable thead th {
+        position: sticky;
+        top: 168px; /* Increased offset to prevent clipping */
+        background-color: #f8f9fa !important;
+        z-index: 1000;
+        border-bottom: 2px solid #dee2e6 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+
+    /* When bulk bar is visible, table head needs to move down further */
+    body.has-bulk-bar #studentTable thead th {
+        top: 224px; /* Adjusting for the bulk sync bar height */
+    }
+
+    /* Ensure z-index layering */
+    .sticky-top[style*="top: 72px"] { z-index: 990 !important; }
+    .sticky-top[style*="top: 155px"] { z-index: 985 !important; }
 </style>
 @endsection

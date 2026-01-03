@@ -30,13 +30,16 @@
         
         /* Sidebar Styling */
         #sidebar-wrapper { 
-            min-height: 100vh; 
+            height: 100vh;
+            position: sticky;
+            top: 0;
             margin-left: calc(-1 * var(--sidebar-width)); 
             width: var(--sidebar-width); 
             background-color: var(--sidebar-bg);
             transition: margin .3s ease-in-out; 
             z-index: 1000;
             flex-shrink: 0;
+            overflow-y: auto;
         }
         
         #sidebar-wrapper .sidebar-heading { 
@@ -240,7 +243,7 @@
         <div id="page-content-wrapper">
             
             <!-- Top Navigation -->
-            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top" style="z-index: 990;">
                 <div class="container-fluid px-4">
                     <button class="btn btn-outline-primary" id="sidebarToggle">
                         <i class="bi bi-list"></i>

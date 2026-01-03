@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use MehediJaman\LaravelZkteco\LaravelZkteco;
-use Illuminate\Http\Request;
 use App\Models\Attendance;
 use App\Models\ZkUser;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan; // Allow manual sync triggering
+use Illuminate\Support\Facades\Log;
+use MehediJaman\LaravelZkteco\LaravelZkteco;
 
 class ZktecoController extends Controller
 {
@@ -431,7 +432,22 @@ class ZktecoController extends Controller
                 return redirect()->back()->with('error', 'Student not found in API');
             }
 
-            $displayName = ($student['StudentNameEn'] ?? $student['StudentName']) . ' (' . $student['StudentID'] . ')';
+            // $displayName = ($student['StudentNameEn'] ?? $student['StudentName']) . ' (' . $student['StudentID'] . ')';
+
+                    $name = ucwords(strtolower($student['StudentNameEn'] ?? $this->bnToEn($student['StudentName'])));
+
+                    // 3. Length > 24 হলে last word remove
+                    while (strlen($name) > 24 && str_contains($name, ' ')) {
+                        $words = explode(' ', $name);
+                        array_pop($words);
+                        $name = implode(' ', $words);
+                    }
+
+                    $displayName = str_replace('.', '', $name);
+                    Log::info('Name: '. $displayName);
+
+
+
             \Illuminate\Support\Facades\Log::info("ZK Sync: Prepared name: " . $displayName);
 
             $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
@@ -442,8 +458,8 @@ class ZktecoController extends Controller
                 \Illuminate\Support\Facades\Log::info("ZK Sync: Connected to device " . $ip);
                 $zk->disableDevice();
                 
-                // Use a random UID to avoid conflicts, but keep student ID as userid (Badge No)
-                $uid = rand(1000, 65000); 
+                // Use a random UID (Max 10000 to stay within common device limits)
+                $uid = rand(1000, 10000); 
                 $userid = (string)$student['id'];
                 
                 \Illuminate\Support\Facades\Log::info("ZK Sync: Attempting setUser with UID: {$uid}, UserID: {$userid}, Name: {$displayName}");
@@ -491,6 +507,37 @@ class ZktecoController extends Controller
             return redirect()->back()->with('error', "Error: " . $e->getMessage());
         }
     }
+    
+
+
+    function bnToEn($text) {
+    $bn = [
+        'অ','আ','ই','ঈ','উ','ঊ','এ','ঐ','ও','ঔ',
+        'ক','খ','গ','ঘ','ঙ',
+        'চ','ছ','জ','ঝ','ঞ',
+        'ট','ঠ','ড','ঢ','ণ',
+        'ত','থ','দ','ধ','ন',
+        'প','ফ','ব','ভ','ম',
+        'য','র','ল','শ','ষ','স','হ',
+        'ড়','ঢ়','য়','ং','ঃ','ঁ',
+        'া','ি','ী','ু','ূ','ে','ৈ','ো','ৌ'
+    ];
+
+    $en = [
+        'a','aa','i','ii','u','uu','e','oi','o','ou',
+        'k','kh','g','gh','ng',
+        'ch','chh','j','jh','n',
+        't','th','d','dh','n',
+        't','th','d','dh','n',
+        'p','ph','b','bh','m',
+        'j','r','l','sh','ss','s','h',
+        'r','rh','y','ng',':','',
+        'a','i','i','u','u','e','oi','o','ou'
+    ];
+
+    return str_replace($bn, $en, $text);
+}
+
 
     /**
      * Sync an entire class to the device and local DB.
@@ -527,10 +574,20 @@ class ZktecoController extends Controller
                 $count = 0;
                 $errors = 0;
                 foreach ($classStudents as $student) {
-                    $displayName = ($student['StudentNameEn'] ?? $student['StudentName']) . ' (' . $student['StudentID'] . ')';
+
+                    $name = ucwords(strtolower($student['StudentNameEn'] ?? $this->bnToEn($student['StudentName'])));
+
+                    // 3. Length > 24 হলে last word remove
+                    while (strlen($name) > 24 && str_contains($name, ' ')) {
+                        $words = explode(' ', $name);
+                        array_pop($words);
+                        $name = implode(' ', $words);
+                    }
+
+                    $displayName = str_replace('.', '', $name);
                     
-                    // Use a random UID to avoid conflicts, but keep student ID as userid (Badge No)
-                    $uid = rand(1000, 65000); 
+                    // Use a random UID (Max 10000 to stay within common device limits)
+                    $uid = rand(1000, 10000); 
                     $userid = (string)$student['id'];
                     
                     $result = $zk->setUser($uid, $userid, $displayName, '', 0, 0);

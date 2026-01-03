@@ -105,7 +105,7 @@
                                 <span class="text-muted" style="font-size: 0.7rem;">{{ date('M d', strtotime($log->timestamp)) }}</span>
                             </td>
                             <td>
-                                @if($log['state'] == 1)
+                                @if($log->type == 1)
                                     <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill">Out</span>
                                 @else
                                     <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill">In</span>
