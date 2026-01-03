@@ -237,7 +237,9 @@ class ZktecoController extends Controller
             // Note: UID is auto-increment internal ID usually, but library asks for it manually sometimes.
             // Using a random UID for demo, ideally find max UID + 1
             $uid = rand(1, 60000); 
-            $userid = $request->userid;
+            $user_type = $request->user_type ?? 'student';
+            $userid = $request->userid; // Keep numeric for device compatibility
+            
             $name = $request->name;
             $role = (int) $request->role;
             $cardno = $request->cardno ?? 0;
@@ -245,6 +247,19 @@ class ZktecoController extends Controller
 
             $zk->setUser($uid, $userid, $name, $password, $role, $cardno);
             $zk->enableDevice();
+            
+            // Sync to local ZkUser DB with user_type
+            ZkUser::updateOrCreate(
+                ['userid' => (string)$userid],
+                [
+                    'uid' => $uid,
+                    'name' => $name,
+                    'role' => $role,
+                    'cardno' => $cardno,
+                    'password' => $password,
+                    'user_type' => $user_type,
+                ]
+            );
             
             return redirect()->route('zk.users.manager')->with('success', 'User Added to Device Successfully!');
         }
@@ -477,6 +492,7 @@ class ZktecoController extends Controller
                         'name' => $displayName,
                         'role' => 0,
                         'cardno' => 0,
+                        'user_type' => 'student',
                     ]
                 );
 
@@ -600,6 +616,7 @@ class ZktecoController extends Controller
                                 'name' => $displayName,
                                 'role' => 0,
                                 'cardno' => 0,
+                                'user_type' => 'student',
                             ]
                         );
                         $count++;

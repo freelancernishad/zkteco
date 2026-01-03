@@ -9,6 +9,6 @@ class ZkUser extends Model
 {
     use HasFactory;
     
-    protected $fillable = ['uid', 'userid', 'name', 'role', 'cardno', 'password', 'fingerprint_status'];
+    protected $fillable = ['uid', 'userid', 'name', 'role', 'cardno', 'password', 'fingerprint_status', 'user_type'];
     //
 }

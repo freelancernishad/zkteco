@@ -29,6 +29,7 @@
                         <th class="ps-4">UID</th>
                         <th>User ID (Badge)</th>
                         <th>Name</th>
+                        <th>User Type</th>
                         <th>Role</th>
                         <th>Fingerprint Status</th>
                         <th>Actions</th>
@@ -41,6 +42,17 @@
                             <td class="fw-bold text-secondary ps-4">#{{ $user->uid }}</td>
                             <td><span class="badge bg-light text-dark border">{{ $user->userid }}</span></td>
                             <td class="fw-bold" id="user-name-{{ $user->uid }}">{{ $user->name }}</td>
+                            <td>
+                                @if(($user->user_type ?? 'student') == 'teacher')
+                                    <span class="badge bg-purple-soft text-purple fw-bold rounded-pill px-3">
+                                        <i class="bi bi-person-workspace me-1"></i> Teacher
+                                    </span>
+                                @else
+                                    <span class="badge bg-info bg-opacity-10 text-info fw-bold rounded-pill px-3">
+                                        <i class="bi bi-person-badge me-1"></i> Student
+                                    </span>
+                                @endif
+                            </td>
                             <td>
                                 @if($user->role == 14) 
                                     <span class="badge badge-admin">Admin</span>
@@ -77,7 +89,7 @@
                         @endforeach
                     @else
                         <tr>
-                            <td colspan="6" class="text-center py-5">
+                            <td colspan="7" class="text-center py-5">
                                 <div class="text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-3"></i>
                                     No users found in database. Please sync with device.
@@ -106,11 +118,18 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">User ID (Badge No)</label>
-                    <input type="number" name="userid" class="form-control" placeholder="e.g. 1001" required>
+                    <input type="number" name="userid" id="newUserIdInput" class="form-control" placeholder="e.g. 1001" required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Full Name</label>
                     <input type="text" name="name" class="form-control" placeholder="e.g. John Doe" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">User Type</label>
+                    <select name="user_type" id="newUserTypeSelect" class="form-select fw-bold">
+                        <option value="student" selected>Student</option>
+                        <option value="teacher">Teacher</option>
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Role</label>
@@ -424,5 +443,8 @@
         border-bottom: 2px solid #dee2e6 !important;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
+
+    .text-purple { color: #6f42c1 !important; }
+    .bg-purple-soft { background-color: rgba(111, 66, 193, 0.1) !important; }
 </style>
 @endsection

@@ -115,7 +115,8 @@ class SyncZktecoLogs extends Command
                                         'name' => $user->name,
                                         'cardno' => $user->cardno,
                                         'role' => $user->role,
-                                        'uid' => $user->uid
+                                        'uid' => $user->uid,
+                                        'user_type' => $user->user_type ?? 'student'
                                     ] : null
                                 ]
                             ]);
