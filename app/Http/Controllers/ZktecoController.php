@@ -178,17 +178,7 @@ class ZktecoController extends Controller
     public function users()
     {
         // 2. Users Management Page
-        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
-        $port = env('ZK_DEVICE_PORT', 4370);
-        $zk = new LaravelZkteco($ip, $port);
-        $users = [];
-        
-        if ($zk->connect()) {
-             $zk->disableDevice();
-             $users = $zk->getUser();
-             $zk->enableDevice();
-        }
-
+        $users = ZkUser::all();
         return view('zk.users', compact('users'));
     }
 
@@ -261,20 +251,81 @@ class ZktecoController extends Controller
         return redirect()->back()->with('error', 'Device Connection Failed');
     }
 
+    public function updateUser(Request $request)
+    {
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+        $port = env('ZK_DEVICE_PORT', 4370);
+        $zk = new LaravelZkteco($ip, $port);
+
+        $success = false;
+        $message = 'Device Connection Failed';
+
+        if ($zk->connect()) {
+            $zk->disableDevice();
+            
+            $user = ZkUser::where('uid', $request->uid)->first();
+            if ($user) {
+                // Using the raw sdk setUser method to update the name
+                // setUser(uid, userid, name, password, role, cardno)
+                $zk->setUser(
+                    (int) $user->uid, 
+                    (string) $user->userid, 
+                    (string) $request->name, 
+                    (string) ($user->password ?? ''), 
+                    (int) $user->role, 
+                    (int) ($user->cardno ?? 0)
+                );
+                
+                $user->update(['name' => $request->name]);
+                $success = true;
+                $message = 'User Name Updated Successfully!';
+            } else {
+                $message = 'User record not found.';
+            }
+            
+            $zk->enableDevice();
+        }
+
+        return response()->json([
+            'status' => $success ? 'success' : 'error',
+            'message' => $message,
+            'name' => $request->name
+        ]);
+    }
+
     public function destroyUser($uid)
     {
         $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
         $port = env('ZK_DEVICE_PORT', 4370);
         $zk = new LaravelZkteco($ip, $port);
 
+        $success = false;
+        $message = 'Device Connection Failed';
+
         if ($zk->connect()) {
             $zk->disableDevice();
             $zk->removeUser($uid);
             $zk->enableDevice();
-            return redirect()->route('zk.users.manager')->with('success', 'User Deleted from Device!');
+            
+            // Also delete from local database
+            ZkUser::where('uid', $uid)->delete();
+            
+            $success = true;
+            $message = 'User Deleted from Device and Database!';
         }
 
-        return redirect()->back()->with('error', 'Device Connection Failed');
+        if (request()->ajax()) {
+            return response()->json([
+                'status' => $success ? 'success' : 'error',
+                'message' => $message
+            ]);
+        }
+
+        if ($success) {
+            return redirect()->route('zk.users.manager')->with('success', $message);
+        }
+
+        return redirect()->back()->with('error', $message);
     }
 
     public function getLogsJson(Request $request)
@@ -323,23 +374,38 @@ class ZktecoController extends Controller
     {
         try {
             $response = \Illuminate\Support\Facades\Http::get('https://tmscedu.com/api/all/students');
-            
             if (!$response->successful()) {
-                return view('zk.students')->with('error', 'Failed to fetch student data from external server.');
+                return view('zk.students')->with('error', 'Failed to fetch student data.');
+            }
+            $allData = $response->json();
+            $students = $allData['data'] ?? [];
+            $classes = collect($students)->pluck('StudentClass')->unique()->sort()->values()->all();
+            
+            return view('zk.students', compact('classes'));
+        } catch (\Exception $e) {
+            return view('zk.students')->with('error', 'Error: ' . $e->getMessage());
+        }
+    }
+
+    public function getStudentsJson()
+    {
+        try {
+            $response = \Illuminate\Support\Facades\Http::get('https://tmscedu.com/api/all/students');
+            if (!$response->successful()) {
+                return response()->json(['status' => 'error', 'message' => 'API Failure'], 500);
             }
 
             $allData = $response->json();
             $students = $allData['data'] ?? [];
-            
-            // Extract unique classes for filter dropdown
-            $classes = collect($students)->pluck('StudentClass')->unique()->sort()->values()->all();
+            $existingUserIds = ZkUser::pluck('userid')->toArray();
 
-            // We will now handle ALL filtering (Search & Class) on the client side via JS 
-            // to avoid page reloads as requested by the user.
-            
-            return view('zk.students', compact('students', 'classes'));
+            return response()->json([
+                'status' => 'success',
+                'students' => $students,
+                'existingUserIds' => $existingUserIds
+            ]);
         } catch (\Exception $e) {
-            return view('zk.students')->with('error', 'Error: ' . $e->getMessage());
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -365,7 +431,7 @@ class ZktecoController extends Controller
                 return redirect()->back()->with('error', 'Student not found in API');
             }
 
-            $displayName = ($student['StudentNameEn'] ?? $student['StudentName']) . ' (' . $student['StudentClass'] . ')';
+            $displayName = ($student['StudentNameEn'] ?? $student['StudentName']) . ' (' . $student['StudentID'] . ')';
             \Illuminate\Support\Facades\Log::info("ZK Sync: Prepared name: " . $displayName);
 
             $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
@@ -398,13 +464,30 @@ class ZktecoController extends Controller
                     ]
                 );
 
+                if (request()->ajax()) {
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => "Student {$displayName} created successfully!",
+                        'userid' => $userid
+                    ]);
+                }
+
                 return redirect()->back()->with('success', "Student {$displayName} created as user successfully (Badge ID: {$userid})!");
+            }
+
+            if (request()->ajax()) {
+                return response()->json(['status' => 'error', 'message' => 'Device Connection Failed'], 500);
             }
 
             \Illuminate\Support\Facades\Log::error("ZK Sync: Device connection failed for IP: " . $ip);
             return redirect()->back()->with('error', 'Device Connection Failed');
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("ZK Sync: Exception in syncStudent: " . $e->getMessage());
+            
+            if (request()->ajax()) {
+                return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            }
+
             return redirect()->back()->with('error', "Error: " . $e->getMessage());
         }
     }
@@ -444,7 +527,7 @@ class ZktecoController extends Controller
                 $count = 0;
                 $errors = 0;
                 foreach ($classStudents as $student) {
-                    $displayName = ($student['StudentNameEn'] ?? $student['StudentName']) . ' (' . $student['StudentClass'] . ')';
+                    $displayName = ($student['StudentNameEn'] ?? $student['StudentName']) . ' (' . $student['StudentID'] . ')';
                     
                     // Use a random UID to avoid conflicts, but keep student ID as userid (Badge No)
                     $uid = rand(1000, 65000); 
@@ -482,6 +565,38 @@ class ZktecoController extends Controller
             \Illuminate\Support\Facades\Log::error("ZK Sync: Exception in syncClass: " . $e->getMessage());
             return redirect()->back()->with('error', "Error: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Check if a user has fingerprint enrolled on the device.
+     */
+    public function checkFingerprint($uid)
+    {
+        $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+        $port = env('ZK_DEVICE_PORT', 4370);
+        $zk = new LaravelZkteco($ip, $port);
+
+        if ($zk->connect()) {
+            $zk->disableDevice();
+            // getFingerprint returns an array of fingerprint data if found, or empty array if not.
+            $fingerprints = $zk->getFingerprint($uid);
+            $zk->enableDevice();
+
+            if (!empty($fingerprints)) {
+                $status = 'added';
+                $message = 'Fingerprint Added';
+            } else {
+                $status = 'not_added';
+                $message = 'Not Added';
+            }
+
+            // Update local database
+            ZkUser::where('uid', $uid)->update(['fingerprint_status' => $status]);
+
+            return response()->json(['status' => $status, 'message' => $message]);
+        }
+
+        return response()->json(['status' => 'error', 'message' => 'Device Connection Failed'], 500);
     }
 }
 

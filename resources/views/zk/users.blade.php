@@ -22,36 +22,51 @@
                         <th>User ID (Badge)</th>
                         <th>Name</th>
                         <th>Role</th>
+                        <th>Fingerprint Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if(isset($users) && count($users) > 0)
                         @foreach($users as $user)
-                        <tr>
-                            <td class="fw-bold text-secondary ps-4">#{{ $user['uid'] }}</td>
-                            <td><span class="badge bg-light text-dark border">{{ $user['userid'] }}</span></td>
-                            <td class="fw-bold">{{ $user['name'] }}</td>
+                        <tr id="user-row-{{ $user->uid }}">
+                            <td class="fw-bold text-secondary ps-4">#{{ $user->uid }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ $user->userid }}</span></td>
+                            <td class="fw-bold">{{ $user->name }}</td>
                             <td>
-                                @if($user['role'] == 14) 
+                                @if($user->role == 14) 
                                     <span class="badge badge-admin">Admin</span>
                                 @else 
                                     <span class="badge badge-user">User</span>
                                 @endif
                             </td>
                             <td>
-                                <a href="{{ route('zk.user.delete', $user['uid']) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this user from the device?');">
-                                    <i class="bi bi-trash"></i>
-                                </a>
+                                <div id="fp-status-{{ $user->uid }}" class="small fw-bold">
+                                    @if($user->fingerprint_status == 'added')
+                                        <span class="text-success"><i class="bi bi-check-circle-fill"></i> Fingerprint Added</span>
+                                    @else
+                                        <span class="text-danger"><i class="bi bi-x-circle-fill"></i> Not Added</span>
+                                    @endif
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-info" onclick="checkFingerprint('{{ $user->uid }}')">
+                                        <i class="bi bi-fingerprint me-1"></i> Check Fingerprint
+                                    </button>
+                                    <button type="button" id="delete-btn-{{ $user->uid }}" class="btn btn-sm btn-outline-danger" onclick="deleteUser('{{ $user->uid }}', '{{ $user->name }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         @endforeach
                     @else
                         <tr>
-                            <td colspan="5" class="text-center py-5">
+                            <td colspan="6" class="text-center py-5">
                                 <div class="text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-3"></i>
-                                    No users found on device.
+                                    No users found in database. Please sync with device.
                                 </div>
                             </td>
                         </tr>
@@ -111,11 +126,72 @@
 
 @section('scripts')
 <script>
-    // Populate global map for notifications (if needed)
-    @if(isset($users))
-        @foreach($users as $u)
-            globalUserMap["{{ $u['userid'] }}"] = "{{ $u['name'] }}";
-        @endforeach
-    @endif
+    function checkFingerprint(uid) {
+        const statusDiv = document.getElementById(`fp-status-${uid}`);
+        statusDiv.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Checking...';
+        
+        fetch(`/zk/user/fingerprint/${uid}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'added') {
+                    statusDiv.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Fingerprint Added</span>';
+                } else if (data.status === 'not_added') {
+                    statusDiv.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle-fill"></i> Not Added</span>';
+                } else {
+                    statusDiv.innerHTML = `<span class="text-warning">${data.message}</span>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusDiv.innerHTML = '<span class="text-danger">Error checking</span>';
+            });
+    }
+
+    function deleteUser(uid, name) {
+        // Removing native confirm as requested.
+        // We will show a toast when starting or just proceed.
+        
+        const btn = document.getElementById(`delete-btn-${uid}`);
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+        btn.disabled = true;
+
+        showToast(`Deleting ${name}...`, 'Processing', 'info');
+
+        fetch(`/zk/user/delete/${uid}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const row = document.getElementById(`user-row-${uid}`);
+                if (row) {
+                    row.classList.add('fade-out');
+                    setTimeout(() => row.remove(), 500);
+                }
+                showToast(data.message, 'Deleted', 'success');
+            } else {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+                showToast(data.message, 'Error', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+            showToast('Failed to connect to server.', 'Error', 'error');
+        });
+    }
 </script>
+
+<style>
+    .fade-out {
+        opacity: 0;
+        transform: translateX(20px);
+        transition: all 0.5s ease;
+    }
+</style>
 @endsection

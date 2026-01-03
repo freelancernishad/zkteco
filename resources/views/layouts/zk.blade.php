@@ -304,17 +304,17 @@
     </div>
 
     <!-- Toast Container for Notifications -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer">
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer" style="z-index: 9999;">
         <!-- Toast Template (Hidden) -->
-        <div id="toastTemplate" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header bg-success text-white">
-                <i class="bi bi-bell-fill me-2"></i>
-                <strong class="me-auto">New Attendance</strong>
+        <div id="toastTemplate" class="toast hide border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header border-0 text-white">
+                <i class="bi bi-bell-fill me-2" id="toastIcon"></i>
+                <strong class="me-auto" id="toastTitle">Notification</strong>
                 <small>Just Now</small>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-            <div class="toast-body fw-bold toast-message">
-                New punch detected!
+            <div class="toast-body fw-medium" id="toastMessage">
+                Message content goes here.
             </div>
         </div>
     </div>
@@ -334,18 +334,38 @@
         const toastContainer = document.getElementById('toastContainer');
         const toastTemplate = document.getElementById('toastTemplate');
 
-        function showToast(name, state) {
+        function showToast(message, title = 'Notification', type = 'success') {
             // Clone template
             const newToastEl = toastTemplate.cloneNode(true);
             newToastEl.id = ''; // Remove ID to avoid duplicates
             newToastEl.classList.remove('hide');
             
+            // Set Color based on Type
+            const header = newToastEl.querySelector('.toast-header');
+            const icon = newToastEl.querySelector('#toastIcon');
+            
+            if (type === 'success') {
+                header.classList.add('bg-success');
+                icon.className = 'bi bi-check-circle-fill me-2';
+            } else if (type === 'error') {
+                header.classList.add('bg-danger');
+                icon.className = 'bi bi-exclamation-triangle-fill me-2';
+            } else if (type === 'warning') {
+                header.classList.add('bg-warning', 'text-dark');
+                icon.className = 'bi bi-exclamation-circle-fill me-2';
+                newToastEl.querySelector('.btn-close').classList.remove('btn-close-white');
+            } else {
+                header.classList.add('bg-primary');
+                icon.className = 'bi bi-info-circle-fill me-2';
+            }
+            
             // Set Content
-            newToastEl.querySelector('.toast-message').innerText = `${name} just ${state}!`;
+            newToastEl.querySelector('#toastTitle').innerText = title;
+            newToastEl.querySelector('#toastMessage').innerText = message;
             
             // Append and Show
             toastContainer.appendChild(newToastEl);
-            const toast = new bootstrap.Toast(newToastEl);
+            const toast = new bootstrap.Toast(newToastEl, { autohide: true, delay: 5000 });
             toast.show();
             
             // Remove from DOM after hidden
