@@ -12,6 +12,15 @@ use MehediJaman\LaravelZkteco\LaravelZkteco;
 class ZktecoController extends Controller
 {
     /**
+     * Get a safe UID that is not taken on the machine or in DB.
+     */
+    private function getAvailableUid()
+    {
+        $maxDb = ZkUser::max('uid') ?? 0;
+        return $maxDb + 1;
+    }
+
+    /**
      * Connect to the ZKTeco device.
      */
     public function connect()
@@ -235,8 +244,9 @@ class ZktecoController extends Controller
             
             // uid (int), userid (string), name (string), password (string), role (int), cardno (int)
             // Note: UID is auto-increment internal ID usually, but library asks for it manually sometimes.
-            // Using a random UID for demo, ideally find max UID + 1
-            $uid = rand(1, 60000); 
+            $existingUser = ZkUser::where('userid', (string)$request->userid)->first();
+            $uid = $existingUser ? $existingUser->uid : $this->getAvailableUid();
+            
             $user_type = $request->user_type ?? 'student';
             $userid = $request->userid; // Keep numeric for device compatibility
             
@@ -473,9 +483,11 @@ class ZktecoController extends Controller
                 \Illuminate\Support\Facades\Log::info("ZK Sync: Connected to device " . $ip);
                 $zk->disableDevice();
                 
-                // Use a random UID (Max 10000 to stay within common device limits)
-                $uid = rand(1000, 10000); 
+                $existingUser = ZkUser::where('userid', (string)$student['id'])->first();
+                $uid = $existingUser ? $existingUser->uid : $this->getAvailableUid();
+                
                 $userid = (string)$student['id'];
+                
                 
                 \Illuminate\Support\Facades\Log::info("ZK Sync: Attempting setUser with UID: {$uid}, UserID: {$userid}, Name: {$displayName}");
                 
@@ -602,8 +614,8 @@ class ZktecoController extends Controller
 
                     $displayName = str_replace('.', '', $name);
                     
-                    // Use a random UID (Max 10000 to stay within common device limits)
-                    $uid = rand(1000, 10000); 
+                    $existingUser = ZkUser::where('userid', $userid)->first();
+                    $uid = $existingUser ? $existingUser->uid : $this->getAvailableUid();
                     $userid = (string)$student['id'];
                     
                     $result = $zk->setUser($uid, $userid, $displayName, '', 0, 0);
@@ -720,10 +732,9 @@ class ZktecoController extends Controller
             if ($zk->connect()) {
                 \Illuminate\Support\Facades\Log::info("ZK Sync: Connected to device " . $ip);
                 $zk->disableDevice();
-                
-                // Use a random UID
-                $uid = rand(1000, 10000); 
                 $userid = "999" . (string)$staff['id'];
+                $existingUser = ZkUser::where('userid', $userid)->first();
+                $uid = $existingUser ? $existingUser->uid : $this->getAvailableUid();
                 
                 \Illuminate\Support\Facades\Log::info("ZK Sync: Attempting setUser with UID: {$uid}, UserID: {$userid}, Name: {$displayName}");
                 

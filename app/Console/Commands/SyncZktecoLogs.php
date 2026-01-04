@@ -49,19 +49,30 @@ class SyncZktecoLogs extends Command
             $users = $zk->getUser();
             $zk->enableDevice();
 
+            $this->info("Sync: Found " . count($users) . " users on device.");
+            // Log::info("ZK Sync: Fetched " . count($users) . " users from device.");
+
             foreach ($users as $u) {
+                // Handle potential UID collisions: 
+                // If this UID is already in DB but assigned to a DIFFERENT userid, delete the old one
+                $conflictingUser = ZkUser::where('uid', $u['uid'])->where('userid', '!=', $u['userid'])->first();
+                if ($conflictingUser) {
+                    Log::warning("ZK Sync: UID Collision! UID " . $u['uid'] . " was assigned to " . $conflictingUser->userid . " (" . $conflictingUser->name . ") but device says it belongs to " . $u['userid'] . " (" . $u['name'] . "). Deleting conflicting record.");
+                    $conflictingUser->delete();
+                }
+
                 ZkUser::updateOrCreate(
                     ['userid' => $u['userid']], // Key: Badge ID
                     [
                         'uid' => $u['uid'],
                         'name' => $u['name'],
                         'role' => $u['role'],
-                        'password' => $u['password'],
-                        'cardno' => $u['cardno']
+                        'password' => $u['password'] ?? '',
+                        'cardno' => $u['cardno'] ?? ''
                     ]
                 );
             }
-            //$this->info('Users synced: ' . count($users));
+            $this->info('Users synced successfully.');
 
             // 2. Sync Logs
             //$this->info('Fetching attendance logs...');
@@ -139,8 +150,8 @@ class SyncZktecoLogs extends Command
             if ($newCount > 0) {
                 $this->info("Sync: $newCount new records.");
             }
-        } else {
-                //$this->error('Connection Failed.');
+            } else {
+                $this->error('Connection Failed.');
             }
         } catch (\Exception $e) {
             $this->error('Error: ' . $e->getMessage());
