@@ -75,12 +75,12 @@ class SyncZktecoLogs extends Command
             $this->info('Users synced successfully.');
 
             // 2. Sync Logs
-            //$this->info('Fetching attendance logs...');
+            $this->info('Fetching attendance logs...');
             // Connection is still open
             $attendance = $zk->getAttendance();
-            // Log::info($attendance);
             
             // Log::info("ZK Sync: Fetched " . count($attendance) . " records from device.");
+            $this->info("Found " . count($attendance) . " log records on device.");
             
             $newCount = 0;
             foreach ($attendance as $log) {
