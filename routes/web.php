@@ -22,8 +22,11 @@ Route::get('/zk/api/logs', [App\Http\Controllers\ZktecoController::class, 'getLo
 Route::get('/zk/students', [App\Http\Controllers\ZktecoController::class, 'students'])->name('zk.students');
 Route::get('/zk/students/sync/{id}', [App\Http\Controllers\ZktecoController::class, 'syncStudent'])->name('zk.students.sync');
 Route::post('/zk/students/sync-class', [App\Http\Controllers\ZktecoController::class, 'syncClass'])->name('zk.students.sync.class');
+Route::get('/zk/staffs', [App\Http\Controllers\ZktecoController::class, 'staffs'])->name('zk.staffs');
+Route::get('/zk/staffs/sync/{id}', [App\Http\Controllers\ZktecoController::class, 'syncStaff'])->name('zk.staffs.sync');
 Route::get('/zk/user/fingerprint/{uid}', [App\Http\Controllers\ZktecoController::class, 'checkFingerprint'])->name('zk.user.fingerprint');
 Route::get('/zk/api/students', [App\Http\Controllers\ZktecoController::class, 'getStudentsJson'])->name('zk.api.students');
+Route::get('/zk/api/staffs', [App\Http\Controllers\ZktecoController::class, 'getStaffsJson'])->name('zk.api.staffs');
 
 
 

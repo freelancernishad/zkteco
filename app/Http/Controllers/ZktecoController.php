@@ -642,6 +642,136 @@ class ZktecoController extends Controller
     }
 
     /**
+     * Display a listing of staffs from external API.
+     */
+    public function staffs(Request $request)
+    {
+        return view('zk.staffs');
+    }
+
+    public function getStaffsJson()
+    {
+        try {
+            $response = \Illuminate\Support\Facades\Http::get('https://tmscedu.com/api/get/all/staff');
+            if (!$response->successful()) {
+                return response()->json(['status' => 'error', 'message' => 'API Failure'], 500);
+            }
+
+            $allData = $response->json();
+            $staffs = $allData['data'] ?? [];
+            
+            // Add id_prefixed for consistency with the device requirement
+            foreach ($staffs as &$staff) {
+                $staff['id_prefixed'] = "999" . $staff['id'];
+            }
+            
+            $existingUserIds = ZkUser::pluck('userid')->toArray();
+
+            return response()->json([
+                'status' => 'success',
+                'staffs' => $staffs,
+                'existingUserIds' => $existingUserIds
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Sync a single staff to the device and local DB.
+     */
+    public function syncStaff($id)
+    {
+        try {
+            \Illuminate\Support\Facades\Log::info("ZK Sync: Individual sync requested for staff ID: " . $id);
+            
+            $response = \Illuminate\Support\Facades\Http::get('https://tmscedu.com/api/get/all/staff');
+            if (!$response->successful()) {
+                \Illuminate\Support\Facades\Log::error("ZK Sync: API request failed (Individual). Status: " . $response->status());
+                return redirect()->back()->with('error', 'API Failure');
+            }
+
+            $staffs = $response->json()['data'] ?? [];
+            $staff = collect($staffs)->firstWhere('id', $id);
+            
+            if (!$staff) {
+                \Illuminate\Support\Facades\Log::error("ZK Sync: Staff ID " . $id . " not found in API response.");
+                return redirect()->back()->with('error', 'Staff not found in API');
+            }
+
+            $name = ucwords(strtolower($this->bnToEn($staff['TeacherName'])));
+
+            // 3. Length > 24 হলে last word remove
+            while (strlen($name) > 24 && str_contains($name, ' ')) {
+                $words = explode(' ', $name);
+                array_pop($words);
+                $name = implode(' ', $words);
+            }
+
+            $displayName = str_replace('.', '', $name);
+            Log::info('Name: '. $displayName);
+
+            \Illuminate\Support\Facades\Log::info("ZK Sync: Prepared name: " . $displayName);
+
+            $ip = env('ZK_DEVICE_IP', '192.168.0.201'); 
+            $port = env('ZK_DEVICE_PORT', 4370);
+            $zk = new LaravelZkteco($ip, $port);
+
+            if ($zk->connect()) {
+                \Illuminate\Support\Facades\Log::info("ZK Sync: Connected to device " . $ip);
+                $zk->disableDevice();
+                
+                // Use a random UID
+                $uid = rand(1000, 10000); 
+                $userid = "999" . (string)$staff['id'];
+                
+                \Illuminate\Support\Facades\Log::info("ZK Sync: Attempting setUser with UID: {$uid}, UserID: {$userid}, Name: {$displayName}");
+                
+                $result = $zk->setUser($uid, $userid, $displayName, '', 0, 0);
+                \Illuminate\Support\Facades\Log::info("ZK Sync: Device setUser result: " . ($result ? 'Success' : 'Failed'));
+                $zk->enableDevice();
+
+                // Sync to local ZkUser DB
+                ZkUser::updateOrCreate(
+                    ['userid' => $userid],
+                    [
+                        'uid' => $uid,
+                        'name' => $displayName,
+                        'role' => 0,
+                        'cardno' => 0,
+                        'user_type' => 'teacher',
+                    ]
+                );
+
+                if (request()->ajax()) {
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => "Staff {$displayName} created successfully!",
+                        'userid' => $userid
+                    ]);
+                }
+
+                return redirect()->back()->with('success', "Staff {$displayName} created as user successfully (Badge ID: {$userid})!");
+            }
+
+            if (request()->ajax()) {
+                return response()->json(['status' => 'error', 'message' => 'Device Connection Failed'], 500);
+            }
+
+            \Illuminate\Support\Facades\Log::error("ZK Sync: Device connection failed for IP: " . $ip);
+            return redirect()->back()->with('error', 'Device Connection Failed');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("ZK Sync: Exception in syncStaff: " . $e->getMessage());
+            
+            if (request()->ajax()) {
+                return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            }
+
+            return redirect()->back()->with('error', "Error: " . $e->getMessage());
+        }
+    }
+
+    /**
      * Check if a user has fingerprint enrolled on the device.
      */
     public function checkFingerprint($uid)

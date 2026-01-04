@@ -230,6 +230,9 @@
                 <a href="{{ route('zk.students') }}" class="list-group-item list-group-item-action bg-transparent {{ Request::routeIs('zk.students') ? 'active' : '' }}">
                     <i class="bi bi-mortarboard"></i> Students
                 </a>
+                <a href="{{ route('zk.staffs') }}" class="list-group-item list-group-item-action bg-transparent {{ Request::routeIs('zk.staffs') ? 'active' : '' }}">
+                    <i class="bi bi-person-workspace"></i> Staffs
+                </a>
                 <a href="{{ route('zk.connect') }}" class="list-group-item list-group-item-action bg-transparent {{ Request::routeIs('zk.connect') ? 'active' : '' }}">
                     <i class="bi bi-router"></i> Device Info
                 </a>
